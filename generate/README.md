@@ -16,3 +16,6 @@ script to get virtual path desty information
 ## get_policy_U.py
 generate matrix U 
 
+
+## v_opt.py
+V-Optimal algorithm

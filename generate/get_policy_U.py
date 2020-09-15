@@ -5,6 +5,8 @@ import json
 import sys, os
 import multiprocessing
 from multiprocessing import Process
+from pqdict import PQDict
+import pickle 
 
 import networkx as nx
 from tpath import TPath
@@ -39,6 +41,31 @@ class Rout:
 
     def get_graph(self, edge_desty):
         speed_dict = self.get_speed()
+        all_nodes, all_edges = set(), set()
+        for key in speed_dict:
+            line = key.split('-')
+            all_nodes.add(line[0])
+            all_nodes.add(line[1])
+            all_edges.add(key)
+        all_nodes, all_edges = list(all_nodes), list(all_edges)
+        All_edges = []
+        for edge in all_edges:
+            edge_ = edge.split('-')
+            if edge in edge_desty:
+                cost1 = edge_desty[edge].keys()
+                cost = min(float(l) for l in cost1)
+                All_edges.append((edge_[0], edge_[1], cost))
+            elif edge in speed_dict:
+                cost1 = speed_dict[edge].keys()
+                cost = min(float(l) for l in cost1)
+                All_edges.append((edge_[0], edge_[1], cost))
+        for edge in speed_dict:
+            if edge not in edge_desty:
+                edge_desty[edge] = speed_dict[edge]
+        G2 = nx.DiGraph()
+        G2.add_nodes_from(all_nodes)
+        G2.add_weighted_edges_from(All_edges)
+
         fn = open(self.subpath+self.graph_store_name)
         edges, edges_p, nodes, nodes_p = [], [], set(), set()
         l, l2 = 0, 0
@@ -77,7 +104,7 @@ class Rout:
         G = nx.DiGraph()
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
-        return edges, nodes, edge_desty, G
+        return edges, nodes, edge_desty, G2
     
     def get_dict(self, ):
         #with open(self.subpath+self.fpath_desty) as js_file:
@@ -97,118 +124,69 @@ class Rout:
     #    path = nx.dijkstra_path(G, source, target)
     #    return path
 
-    def computeU(self, v_i, v_order, edge_desty, nodes_order, U, Q, G, iset):
-        T_s, T_e = np.inf, self.eta #*self.sigma
-        T_e_ = T_e
-        success = list(G.successors(v_i))
-        real_success = []
-        for suc in success:
-            if suc in iset:
-                real_success.append(suc)
-        if len(success) < 1:
-            print('len success: %d'%len(success))
-        if len(real_success) < 1:
-            print('len real_success: %d'%len(real_success))
-        UZ = np.zeros(len(real_success) * (self.eta+1)).reshape(len(real_success), self.eta+1)
-        if len(real_success) > 0: iset.add(v_i)
-        for l, z in enumerate(real_success):
-            z_order = nodes_order[z]
-            #if U[z_order][0] == -1: self.computeU(z, z_order, edge_desty, nodes_order, U, Q, G, iset)
-            if U[z_order][0] == -1: print('u z order -1')
-            vkey = v_i + '-' + z
-            vkey_ = z + '-' +v_i  
-            if vkey in edge_desty:
-                z_low = min([float(l_) for l_ in edge_desty[vkey].keys()])
-                pdf = edge_desty[vkey]
+    def compute_one_rowu(self, v_i, v_d, sucpre, edge_desty, nodes_order, U, Q, G, iset, pred):
+        st1, vimin, v_s = v_i, 0.0, sucpre[v_i]
+        vi_order, vs_order = nodes_order[v_i], nodes_order[v_s]
+        while st1 != v_d:
+            st2, st1 = st1 , pred[st1]
+            tedge = st2 + '-' + st1
+            if tedge in edge_desty:
+                vimin += min(list([float(l) for l in edge_desty[tedge].keys()]))
             else:
-                print('no pdf. ..') 
-
-            pdf = dict(sorted(pdf.items(), key=lambda t: t[0]))
-            u_min = -1
-            for i in range(self.eta+1):
-                if U[z_order][i] > 0:
-                    u_min = i*self.sigma 
-                    break
-            if u_min == -1: 
-                print('error ..')
-                print('v_i %s and z %s'%(v_i, z))
-                print(U[z_order])
-                sys.exit()
-            t_z = int(u_min + z_low)
-            #if t_z % self.sigma != 0:
-            #    t_z = (int(t_z/self.sigma)+1)*self.sigma
-            t_z_ = int(t_z / self.sigma)
-            if t_z_ > self.eta:
-                print('z_low %f, t_z %d, t_z_ %d, u_min %d' %(z_low, t_z, t_z_, u_min))
-                print('t_z_ larger eq than self.eta, continue')
-                print(U[z_order])
-                continue
-            T_s = min(int(t_z/self.sigma), T_s)
-            UZ[l][t_z_] = 0
-            temp = []
-            last_te = -1
-            for c in pdf:
-                te = u_min + float(c)
-                #if te % self.sigma !=0 : te = (te/self.sigma+1)*self.sigma
-                te_ = int(te / self.sigma)
-                if te_ <= T_e and UZ[l][te_] < 1:
-                    temp.append((te, te_))
-                    #uk = self.sigma*(self.eta-1) - float(c)
-                    uk = self.sigma*(self.eta) - float(c)
-                    uk_ = int(uk/self.sigma)
-                    if last_te == -1:
-                        UZ[l][te_] = pdf[c]*U[z_order][uk_]
-                        last_te = te_
-                    else:
-                        UZ[l][te_] = UZ[l][last_te] + pdf[c]*U[z_order][uk_]
-                        last_te = te_
-            if len(temp) == 0:
-                if len(success) > 0:
-                    print('len temp is 0, len real is larger than 0, continue, pid %d, len success %d'%(os.getpid(), len(success)))
-                    continue
-                else:
-                    print('len temp is 0, len real is 0, exit, pid %d, len success %d '%(os.getpid(), len(success)))
-                    sys.exit()
-            (te1, te_1) = temp[0]
-            (ten, te_n) = temp[-1]
-            last_te1 = int(te_1)
-            ta1 = -1
-            for (ta, ta1) in temp[1:]: # fullfill UZ
-                while last_te1 < ta1:
-                    UZ[l][last_te1] = UZ[l][int(te_1)]
-                    last_te1 += 1
-                last_te1 = int(ta1)
-            if ta1 != -1:
-                while last_te1 < self.eta:
-                    UZ[l][last_te1] = UZ[l][int(ta1)]
-                    last_te1 += 1
-            T_e_ = min(te_n, T_e_)
-        T_e = T_e_
-        if T_s > T_e:
-            print('T_s larger than T_e , error')
-            #print(T_s)
-            #print(T_e)
-            #continue
-            sys.exit()
-        for T_prime in range(self.eta):
-            if T_prime < T_s:
-                U[v_order][T_prime] = 0
-            elif T_prime >= T_e:
-                U[v_order][T_prime] = 1
-            else: 
-                max_ = -1
-                for k in range(len(real_success)):
-                    max_ = max(UZ[k][T_prime], max_)
-                U[v_order][T_prime] = max_
-        #print('T_s %d, T_e %d' %(T_s, T_e))
-        del UZ
-        #if vi == '447866':
-        #    print('vi %s'%vi)
-        #    print(U[vi])
+                print('error ... ')
+        row_l = vimin
+        row_s = self.eta * self.sigma
+        for i in range(self.eta):
+            if i * self.sigma < row_l:
+                U[vi_order][i] = 0.0
+        row_x = row_l
+        #row_inx = int(row_l / self.sigma)
+        while row_x < self.eta * self.sigma:
+            i = int(row_x / self.sigma)
+            U[vi_order][i] = 0
+            for row_c in edge_desty[v_i+'-'+v_s]:
+                #inx_xc = int((row_x-float(row_c))/self.sigma) 
+                inx_xc =  int((row_x-float(row_c))/self.sigma) 
+                if inx_xc < 0 : continue
+                U[vi_order][i] = U[vi_order][i] + edge_desty[v_i+'-'+v_s][row_c] * U[vs_order][inx_xc]
+            if U[vi_order][i] < 1:
+                row_x = row_x + self.sigma
+            else:
+                break
+        row_s = min(row_s, row_x)
+        for i in range(int(row_s/self.sigma), self.eta):
+            U[vi_order][i] = 1.0 
         return True
 
 
+    def get_dijkstra3(self, G,  target):
+        Gk = G.reverse()
+        inf = float('inf')
+        D = {target:0}
+        Que = PQDict(D)
+        P = {}
+        nodes = Gk.nodes
+        U = set(nodes)
+        while U:
+            #print('len U %d'%len(U))
+            #print('len Q %d'%len(Que))
+            if len(Que) == 0: break
+            (v, d) = Que.popitem()
+            D[v] = d
+            U.remove(v)
+            #if v == target: break
+            neigh = list(Gk.successors(v))
+            for u in neigh:
+                if u in U:
+                    d = D[v] + Gk[v][u]['weight']
+                    if d < Que.get(u, inf):
+                        Que[u] = d
+                        P[u] = v
+        return P
+
+
     def rout_(self, v_d, edge_desty, edges, nodes, nodes_order, G):
+        pred = self.get_dijkstra3(G, v_d)
         N = len(nodes)
         U = np.zeros(N * self.eta).reshape(N, self.eta)
         U.fill(-1)
@@ -224,6 +202,7 @@ class Rout:
             U[nodes_order[v_d]][j] = 1.0
         lsucess, lorder = '', -1
         flag = True
+        sucpre = {}
         while len(Q) != 0:
             v_i = Q.pop(0)
             v_order = nodes_order[v_i]
@@ -233,17 +212,23 @@ class Rout:
                 U[v_order].fill(1) # = 1
                 iset.add(v_i)
             else:
-                self.computeU(v_i, v_order, edge_desty, nodes_order, U, Q, G, iset)
+                #self.computeU(v_i, v_order, edge_desty, nodes_order, U, Q, G, iset)
+                self.compute_one_rowu(v_i, v_d, sucpre, edge_desty, nodes_order, U, Q, G, iset, pred)
+                iset.add(v_i)
         
             #print(list(G.predecessors(v_i)))
             for v in list(G.predecessors(v_i)):
                 if U[nodes_order[v]][0] == -1:
                     if v not in Q :
+                    #if v not in iset:
+                        sucpre[v] = v_i
                         Q.append(v)
         print('pid %d, v_d %s, len iset %d'%(os.getpid(), v_d, len(iset)))
+        U = np.round(U, 4)
+        #sys.exit()
         return U
     
-    def rout(self, sub_nodes, edge_desty, edges, nodes, gnodes, nodes_order, G):
+    def rout(self, sub_nodes, edge_desty, edges, nodes, nodes_order, G):
         print('hehe')
         print('pid %d'%os.getpid())
         #rout_res = []
@@ -277,7 +262,19 @@ class Rout:
         strs = ''
         for ix, ky in enumerate(nodes):
             U_ = U_2[ix]
-            strs += ky+';'+';'.join(str(l) for l in U_) + '\n'
+            AL = np.argwhere(U_ > 0)
+            AH = np.argwhere(U_ > 0.999999)
+            if len(AL) == 0:
+                al = 0
+                strs += ky+';'+str(-1)+';'+str(-1)+'\n'
+            else:
+                al = AL[0][0]
+                if len(AH) == 0:
+                    ah = self.eta
+                else:
+                    ah = AH[0][0]
+                strs += ky+';'+str(al-1)+';'+str(ah)+';'+';'.join(str(l) for l in U_[al:ah])+'\n'
+            #strs += ky+';'+';'.join(str(l) for l in U_) + '\n'
         fw = open(self.umatrix_path+name, 'w')
         fw.write(strs)
         fw.close()
@@ -288,27 +285,29 @@ class Rout:
     def main(self, v_s, v_d):
         edge_desty = self.get_dict()
         edges, nodes, edge_desty, G = self.get_graph(edge_desty)
-        gnodes = self.get_nodes()
-        '''
-        las = -1.0
-        for edge in edge_desty:
-            ekey = list(edge_desty[edge].keys())
-            if len(ekey) == 1:
-                las = max(las, float(ekey[0]))
-            #print(edge)
-            #print(edge_desty[edge])
-        print(las)
-        sys.exit() '''
+        #gnodes = self.get_nodes()
         nodes_order, nodes_order_r = {}, {}
         self.result = []
         final_inx = []
         i = 0
         for node in nodes:
             nodes_order[node] = i
-            #nodes_order_r[i] = node
+            nodes_order_r[i] = node
             i += 1
-        gnodes_other = list(set(gnodes) - set(os.listdir(self.umatrix_path)))
+        #gnodes_other = list(set(gnodes) - set(os.listdir(self.umatrix_path)))
+        gnodes_other = list(set(os.listdir('./res3/u_mul_matrix_sig90/')))
+        with open('./res3/temp.name', 'rb') as fw:
+            gnodes_other = pickle.load(fw)
+        gnodes_other = set()
+        with open('./temp/no_nodes') as fn:
+            for line in fn:
+                line = line.strip()
+                gnodes_other.add(line)
+        gnodes_other = list(gnodes_other)
+        with open('./res3/temp.name.sig%d'%self.sigma, 'wb') as fn:
+            pickle.dump(nodes_order, fn)
         #N = len(gnodes)
+
         N = len(gnodes_other)
         #self.write_json(nodes_order, 'nodes_order.json')
         if N % self.process_num == 0:
@@ -321,34 +320,24 @@ class Rout:
         print('begin ... ')
         for len_thr in range(self.process_num):
             mins = min((len_thr+1)*t_inx, N)
-            #sub_array = gnodes[len_thr*t_inx:mins]
             sub_array = gnodes_other[len_thr*t_inx:mins]
-            #args_ = [sub_array, vedge_desty]#, edge_desty, path_desty, edges]
             print(len(sub_array))
-            pool.apply_async(self.rout, args=(sub_array, edge_desty, edges, nodes, gnodes, nodes_order, G))
-            #pool.apply_async(self.rout, args=(sub_array, edge_desty, edges, nodes, nodes_order, G), callback=self.collect_res)
-            #self.rout(sub_array, edge_desty, edges, nodes, nodes_order, G)
-            #pool.apply_async(self.rout, args=(sub_array, edge_desty,  edges, nodes, nodes_order, G), callback=self.collect_res)
+            pool.apply_async(self.rout, args=(sub_array, edge_desty, edges, nodes,  nodes_order, G))
         pool.close()
         pool.join()
         
         print('len result %d'%len(self.result))
         print('process end ...')
-        #print(self.result)
-        #for res in self.result:
-        #    self.save_matrix(res[0], res[1], nodes)
-        #    self.write_file(res[0], res[2])
-        #print('store end ...')
 
 if __name__ == '__main__':
     threads_num = 15
     process_num = 20
     time_budget = 1000
     maxsize = 10000
-    eta, sigma = 333, 30
-    eta, sigma = 333, 30
-    eta, sigma = 170, 60
-    eta, sigma = 200, 10
+    #eta, sigma = 333, 30
+    eta, sigma = 111, 90
+    #eta, sigma = 170, 60
+    #eta, sigma = 800, 10
     dinx = 3
     subpath = './res%d/'%dinx
     filename = '../../data/AAL_short_%d.csv'%dinx
