@@ -17,7 +17,6 @@ class PaceRout():
         self.fpath = fpath
         self.hU = {}
         self.T = T
-        self.sigma = 30
         self.sigma = sigma
         self.eta = eta
         self.vopt = VOpt()
@@ -46,86 +45,6 @@ class PaceRout():
         plt.savefig('./figure/'+name2+'_'+name1+'.png')
         plt.close()
 
-    def get_subpath(self, ):
-        path_desty, path_count = {}, {}
-        iters = 0
-        vopt = VOpt()
-        for i in self.subpath_range:
-            with open(self.subpath_path+str(i)+'.json') as json_file:
-                jsdata = json.load(json_file)
-                for key in jsdata.keys():
-                    a = key.find('-')
-                    a1 = key[:a]
-                    b = key.rfind('-')
-                    b1 = key[b+1:]
-                    time_cost = [float(l) for l in jsdata[key].keys()]
-                    time_freq = [int(l) for l in jsdata[key].values()]
-                    new_w = vopt.v_opt(time_cost, time_freq, self.B)
-                    short = a1+'-'+b1
-                    path_desty[short] = [key, new_w]
-                    #path_count[iters] = key
-                    iters += 1
-        #overlap = self.cal_overlap(list(path_desty.keys()))
-        return path_desty, path_count#, overlap
-
-    def get_tpath(self, points):
-        with open(self.subpath+self.true_path) as js_file:
-            true_path = json.load(js_file)
-        TA, TB, TC, TD = [], [], [], []
-        for tkey in true_path:
-            a = tkey.find('-')
-            a1 = tkey[:a]
-            b = tkey.rfind('-')
-            b1 = tkey[b+1:]
-            tkey_ = a1+'-'+b1
-            dist = self.get_distance(points, (a1, b1))
-            valu = [float(l)/100 for l in true_path[tkey].values()]
-            if dist < 5: TA.append((tkey, valu, a1, b1))
-            elif dist < 10: TB.append((tkey, valu, a1, b1))
-            elif dist < 25: TC.append((tkey, valu, a1, b1))
-            else: TD.append((tkey, valu, a1, b1))
-        print(len(TA))
-        print(len(TB))
-        print(len(TC))
-        print(len(TD))
-        A = sorted(np.random.randint(0, len(TA), self.pairs_num))
-        B = sorted(np.random.randint(0, len(TB), self.pairs_num))
-        C = sorted(np.random.randint(0, len(TC), self.pairs_num))
-        D = sorted(np.random.randint(0, len(TD), self.pairs_num))
-        ta = [TA[l] for l in A]
-        tb = [TB[l] for l in B]
-        tc = [TC[l] for l in C]
-        td = [TD[l] for l in D]
-        return [ta, tb, tc, td]
-
-    def get_vtpath(self, edge_desty, path_desty, vpath):
-        vpath = vpath.strip().split(';')
-        new_vpath = []
-        for vp in vpath:
-            if vp in path_desty:
-                new_vpath.append(path_desty[vp][0][0])
-            else:
-                new_vpath.append(vp)
-        
-        return ';'.join(l for l in new_vpath)
-
-
-    def get_pairs(self, ):
-        lines = [1706875, 1811547, 2160483, 41122]
-
-        r_pairs = [[], [], [], []]
-        for l, pname in enumerate(self.pairs_name):
-            A = sorted(np.random.randint(0, lines[l], self.pairs_num))
-            with open(pname) as pn:
-                i, j = 0, 0
-                for line in pn:
-                    line = line.strip().split(',')
-                    if i == A[j]:
-                        r_pairs[l].append((line[1], line[0]))
-                        j += 1
-                        if j == self.pairs_num: break
-                    i += 1
-        return r_pairs
 
     def get_axes(self, ):
         fo = open(self.axes_file)
@@ -143,9 +62,6 @@ class PaceRout():
     def get_dict(self, ):
         with open(self.subpath+self.fpath_desty) as js_file:
             path_desty = json.load(js_file)
-        #with open(self.subpath+self.fvedge_desty) as js_file:
-        #    vedge_desty = json.load(js_file)
-        #    vedge_desty = dict(sorted(vedge_desty.items(), key=operator.itemgetter(0)))
         with open(self.subpath+self.fedge_desty) as js_file:
             edge_desty = json.load(js_file)
             edge_desty = dict(sorted(edge_desty.items(), key=operator.itemgetter(0)))
@@ -160,94 +76,8 @@ class PaceRout():
             for line in fn:
                 line = line.strip().split('\t')
                 speed_dict[line[0]] = {3600*float(line[1])/float(line[2]): 1.0}
-                #print(line[0])
-                #print(speed_dict[line[0]])
         return speed_dict
 
-    def get_graph(self, edge_desty, vedge_desty, path_desty):
-        speed_dict = self.get_speed()
-        all_nodes, all_edges = set(), set()
-        for key in speed_dict:
-            line = key.split('-')
-            all_nodes.add(line[0])
-            all_nodes.add(line[1])
-            all_edges.add(key)
-        all_nodes, all_edges = list(all_nodes), list(all_edges)
-
-        fn = open(self.subpath+self.graph_store_name)
-        edges, nodes = [], set()
-        edges_ = set()
-        l, l2, l3 = 0, 0, 0
-        for line in fn:
-            line = line.strip()
-            cost = 0
-            flag = '1'
-            lline = ''
-            if line not in vedge_desty:
-                l3 += 1
-
-            #if line not in edge_desty :#or line not in path_desty:
-            if line not in edge_desty : #or line not in vedge_desty:
-                if line in speed_dict:
-                    cost1 = speed_dict[line]
-                    cost = cost1
-                    edge_desty[line] = cost
-                    flag = 'a1'
-                    lline = line
-                else:
-                    l += 1
-                    continue
-            if line in edge_desty:
-                cost1 = edge_desty[line].keys()
-                cost = min(float(l) for l in cost1)
-                flag = 'a2'
-                lline = line
-            #if line in path_desty:
-            #    cost1 = path_desty[line][1].keys()
-            #    cost = min(float(l) for l in cost1)
-            #    flag = 'a2'
-            #    lline = line
-            if cost < 0: 
-                print(cost1)
-                print(flag)
-                print(lline)
-            l2 += 1
-            line = line.split('-')
-            edges.append((line[0], line[1], cost))
-            edges_.add(line[0] + '-' + line[1])
-            nodes.add(line[0])
-            nodes.add(line[1])
-        fn.close()
-        print('%d %d %d'%(l, l2, l3))
-        
-        
-        for edge in speed_dict:
-            if edge not in edges_:
-                edg = edge.split('-')
-                edges.append((edg[0], edg[1], speed_dict[edge].keys()[0]))
- 
-        for edg in edge_desty:
-            if edg not in speed_dict:
-                speed_dict[edg] = edge_desty[edg]
-        #for edg in vedge_desty:
-        #    if edg not in speed_dict:
-        #        speed_dict[edg] = vedge_desty[edg]
-        for node in all_nodes:
-            if node not in nodes:
-                nodes.add(node)
-        for edge in speed_dict:
-            if edge not in edges_:
-                edg = edge.split('-')
-                edges.append((edg[0], edg[1], float(list(speed_dict[edge].keys())[0])))
- 
-        nodes = list(nodes)
-        G = nx.DiGraph()
-        G.add_nodes_from(nodes)
-        G.add_weighted_edges_from(edges)
-        G.remove_edges_from(G.selfloop_edges())
-        self.speed_dict = speed_dict
-        #sys.exit()
-        return edges, nodes, G, speed_dict
 
     def get_graph2(self, edge_desty, vedge_desty, r_pairs, points):
         speed_dict = self.get_speed()
@@ -285,9 +115,9 @@ class PaceRout():
 
         for edge in vedge_desty:
             if edge not in edge_desty and edge not in speed_dict:
-                if edge in temp_edges: 
-                    print('del %s '%edge)
-                    continue
+                #if edge in temp_edges: 
+                #    print('del %s '%edge)
+                #    continue
                 edge_ = edge.split('-')
                 cost1 = vedge_desty[edge].keys()
                 cost = min(float(l) for l in cost1)
@@ -296,9 +126,9 @@ class PaceRout():
                 #if distan > 17: continue 
                 All_edges.append((edge_[0], edge_[1], cost))
                 all_edges.add(edge)
-        for edge in temp_edges:
-            if edge in vedge_desty:
-                del vedge_desty[edge]
+        #for edge in temp_edges:
+        #    if edge in vedge_desty:
+        #        del vedge_desty[edge]
         print('len of vedge_desty 2: %d'%len(vedge_desty))
         all_nodes, all_edges = list(all_nodes), list(all_edges)
         G = nx.DiGraph()
@@ -342,72 +172,6 @@ class PaceRout():
         DD = dict(sorted(DD.items(), key=operator.itemgetter(0)))
         return DD
 
-    def get_min(self, U, node):
-        return np.argwhere(U[node] > 0)[0][0]
-
-    def cosin_distance(self, vector1, vector2):
-        dot_product = 0.0
-        normA = 0.0
-        normB = 0.0
-        for a, b in zip(vector1, vector2):
-            dot_product += a * b
-            normA += a ** 2
-            normB += b ** 2
-        if normA == 0.0 or normB == 0.0:
-            return None
-        else:
-            return dot_product / ((normA * normB) ** 0.5)
-
-    def lcs(self, A, B):
-        print('A')
-        print(A)
-        print('B')
-        print(B)
-        def seq(K):
-            K = K.strip().split(';')
-            D = [k.split('-')[0] for k in K[:-1]]
-            D_ = K[-1].split('-')
-            D.append(D_[0])
-            D.append(D_[1])
-            return D
-        A_, B_ = seq(A), seq(B)
-        print('A_')
-        print(A_)
-        print('B_')
-        print(B_)
-        m, n = len(A_), len(B_)
-        L = [[0] *(n) for i in range(m)]
-        max = 0
-        for i in range(m):
-            for j in range(n):
-                if A_[i] == B_[j]:
-                    if i == 0 or j == 0:
-                        L[i][j] = 1
-                    else:
-                        L[i][j] = L[i-1][j-1] + 1
-                    if max < L[i][j]:
-                        max = L[i][j]
-        return max, len(A_), len(B_)
-
-    def lcs2(self, A, B):
-        print('A')
-        print(A)
-        print('B')
-        print(B)
-        def seq(K):
-            K = K.strip().split(';')
-            D = [k.split('-')[0] for k in K[:-1]]
-            D_ = K[-1].split('-')
-            D.append(D_[0])
-            D.append(D_[1])
-            return D
-        A_, B_ = set(seq(A)), set(seq(B))
-        print('A_')
-        print(A_)
-        print('B_')
-        print(B_)
-        max_ = len(A_ - (A_ - B_ ))
-        return max_, len(A_), len(B_)
  
     def get_dijkstra(self, G, source, target):
         path = nx.dijkstra_path(G, source, target)
@@ -425,7 +189,6 @@ class PaceRout():
         has_visit.add(start)
         Que = PQDict.maxpq()
         Q, QQ = {}, []
-        #Q, QQ = [], []
         print('neigh : %d'%len(neigh))
         for vi in neigh: 
             if vi in has_visit: continue
@@ -442,11 +205,8 @@ class PaceRout():
             for w_k, w_v in w_can.items():
                 w_exp += float(w_k)*float(w_v)
             if w_min <= self.T:
-                #Q.append((candidite, w_can))
                 Que[candidite] = w_exp
                 Q[candidite] = w_can
-        #print("Q")
-        #print(Q)
         Qkey = list(Q.keys())
         flag = False
         best_path, best_w = None, -1
@@ -509,24 +269,18 @@ class PaceRout():
                         else:
                             new_path_w = self.conv(w_can, next_w)
                     else:
-                        #print(w_can)
                         new_path_w = self.conv(w_can, next_w)
 
                     w_exp = 0.0
                     for w_k, w_v in w_can.items():
                         w_exp += float(w_k)*float(w_v)
-
                     QQ.append((new_path, new_path_w, w_exp))
-
             last_edge = self.get_last_edge(cand)
             if flag: break
             if len(Q) == 0:
-                #Q = QQ
                 for QQ_ in QQ:
                     Q[QQ_[0]] = QQ_[1]
                     Que[QQ_[0]] = QQ_[2] 
-                #Q = copy.deepcopy(QQ)
-                #QQ = {}
         return best_path, best_w, all_rounds, all_expire
 
     def get_dijkstra3(self, G,  target):
@@ -554,16 +308,6 @@ class PaceRout():
                         P[u] = v
         return P
 
-    def get_U(self, u_name):
-        if u_name in self.hU:
-            return self.hU[u_name]
-        fn = open(self.fpath+u_name)
-        U = {}
-        for line in fn:
-            line = line.strip().split(';')
-            U[line[0]] = np.array([float(l) for l in line[1:]])
-        self.hU[u_name] = U
-        return U
 
     def get_U2(self, u_name):
         if u_name in self.hU:
@@ -592,35 +336,21 @@ class PaceRout():
         return U
 
     def main(self, ):
-        #path_desty, path_count = self.get_subpath()
-        #df2 = open('temp/b3_pairs.txt', 'rb')
         df2 = open('test/new_temp4_.txt', 'rb')
         r_pairs = pickle.load(df2)
         df2.close()
 
         vedge_desty, edge_desty, path_desty = self.get_dict()
-        #vedge_desty, edge_desty, _ = self.get_dict()
-        #edges, nodes, G, speed_dict=self.get_graph(edge_desty, vedge_desty, path_desty)
         points = self.get_axes()
         edges, nodes, G, G2, speed_dict = self.get_graph2(edge_desty, vedge_desty, r_pairs, points)
-        #sys.exit()
-        #r_pairs = self.get_tpath(points)
-        #df2 = open('temp/r_pairs2.txt', 'rb')
-        df3 = open('temp/odgt_30_b3pair.txt', 'rb')
-        gt_data = pickle.load(df3) # ((source, destination), cost w, best path)
-        df3.close()
 
-        #sys.exit()
-        #r_pairs = self.get_pairs()
         nodes_order, i = {}, 0
         for node in nodes:
             nodes_order[node] = i
             i += 1
 
-        plot_data1, plot_kl, plot_lcs = [], [], []
-        plot_gt_kl, plot_gt_lcs = [], []
+        plot_data1 = []
         U = ''
-        st_best_w = []
         all_mps, all_mps2 = [], []
         ls = 0
         PT = 5
@@ -636,8 +366,6 @@ class PaceRout():
             print('one_dis : %d'%one_dis)
             tstart2 = time.time()
             print('len pairs %d'%len(pairs))
-            kl_, lcs_ = 0.0, 0.0
-            gt_kl_, gt_lcs_ = 0.0, 0.0
             sums2 = 0
             mps, mps2 = 0.0, 0.0
             alls = 0
@@ -650,7 +378,6 @@ class PaceRout():
                     print(pair_)
                     continue
                 start, desti = pair_[-2], pair_[-1]
-                if start == desti: continue
                 pred = self.get_dijkstra3(G, desti)
                 path_, st1 = [start], start
                 while st1 != desti:
@@ -661,30 +388,20 @@ class PaceRout():
                     sedge = st1+'-'+st2
                     if sedge in edge_desty:
                         speed_key = list([abs(float(l)) for l in edge_desty[sedge].keys()])
-                        #time_budget += max(speed_key)
-                        time_budget += min(speed_key)
-                        #time_budget += (min(speed_key)+ max(speed_key))/2
+                        time_budget += max(speed_key)
                     elif sedge in speed_dict:
                         speed_key = list([abs(float(l)) for l in speed_dict[sedge].keys()])
-                        #time_budget += max(speed_key)
-                        time_budget += min(speed_key)
-                        #time_budget += (min(speed_key)+ max(speed_key))/2
+                        time_budget += max(speed_key)
                     elif sedge in vedge_desty:
                         speed_key = list([abs(float(l)) for l in vedge_desty[sedge].keys()])
-                        #time_budget += max(speed_key)
-                        time_budget += min(speed_key)
-                        #time_budget += (min(speed_key)+ max(speed_key))/2
+                        time_budget += max(speed_key)
                     else: 
                         print(' edge: %s not in speed_dict, exit'%sedge)
                         sys.exit()
-                        #continue
                     st1 = st2 
 
-                #U = self.get_U2(desti)
                 tend = time.time()
-                #gt_kl, gt_path = list(gt_data[ls][1].values()), gt_data[ls][2]
                 ls += 1
-                all_kl_ = []
                 print('budget %f'%time_budget)
                 for t_b_, t_b in enumerate([0.5, 0.75, 1.0, 1.25, 1.5]):
                     tstart = time.time()
@@ -693,7 +410,7 @@ class PaceRout():
                     best_p, best_w, all_rounds, all_expire = self.rout(start, desti, edge_desty, vedge_desty, path_desty, nodes_order, U, G, points, speed_dict)
                     if best_p == None: continue
                     #print('distance %f km'%(self.get_distance(points, (start, desti))))
-                    print('best path %s'%best_p)
+                    #print('best path %s'%best_p)
                     tend = time.time()
                     plot_data1[t_b_] += tend - tstart
                     sums[t_b_] += 1
@@ -706,19 +423,19 @@ class PaceRout():
                     if t_b_ == 2:
                         cost_t += tend - tstart
                         sums2 += 1
-            print('cost t: %f'%cost_t)
-            print('sums2 %d'%sums2)
+            #print('cost t: %f'%cost_t)
+            #print('sums2 %d'%sums2)
             one_plot.append(round(cost_t/sums2, 4))
 
         for i in range(PT):
             if sums[i] == 0:
-                print('zero %d'%i)
+                #print('zero %d'%i)
                 continue
             plot_data1[i] /= sums[i]
-        print(plot_data1)
-        print(sums)
-        print('one plot, routing cost time for distance')
-        print(one_plot)
+        #print(plot_data1)
+        #print(sums)
+        #print('one plot, routing cost time for distance')
+        #print(one_plot)
         One_Plot = One_Plot / One_Sums 
         One_Plot2 = One_Plot2 / One_Sums 
         print('One Plot')
@@ -729,14 +446,14 @@ class PaceRout():
         print(One_Plot2)
         print(One_Plot2.mean(0))
         print(One_Plot2.mean(1))
-
+        '''
         print('All_rounds')
         print(All_rounds)
         print(All_rounds / One_Sums)
         All_rounds = All_rounds / One_Sums
         print(All_rounds.mean(0))
         print(All_rounds.mean(1))
-
+        '''
 
 if __name__ == '__main__':
 
@@ -748,10 +465,8 @@ if __name__ == '__main__':
     fpath = subpath + 'u_mul_matrix_sig%d/'%sigma
     true_path = 'new_path_desty2.json'
     fpath_desty = 'KKdesty_num_%d.json'%threads_num #'new_path_desty1.json'
-    #fvedge_desty = 'M_vedge_desty_num_%d.json'%threads_num
     fvedge_desty = 'M_vedge_desty2.json'
     fedge_desty = 'M_edge_desty.json'
-    graph_store_name = 'KKgraph_%d.txt'%threads_num
     graph_store_name = 'Mgraph_10.txt'
     degree_file = 'KKdegree2_%d.json'%threads_num
     axes_file = '../../data/vertices.txt'

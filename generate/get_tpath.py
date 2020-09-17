@@ -53,8 +53,6 @@ class TPath():
                     edge_time_freq[seg_ids[i]][times[i]] = +1
         for edge in edge_time_freq:
             all_value = sum(edge_time_freq[edge])
-            #for time in edge_time_freq[edge]:
-            #    edge_time_freq[edge][time] = round(100.0*edge_time_freq[edge][time]/all_value,6)
             edge_time_freq[edge] = dict(sorted(edge_time_freq[edge].items(), key=operator.itemgetter(1), reverse=True))
             
         return edge_time_freq
@@ -191,49 +189,31 @@ class TPath():
                 index = np.argsort(freqs)
                 f_index = list(index)
                 s_len = len(index) + k - 1
-                #for k_1 in range(len(index) - 1):
-                #    if is_full(f_index, index[k_1], s_len):
-                #        f_index.remove(index[k_1])
                 for f_inx in f_index:
                     k1 = path1[f_inx]
                     if k1 in cut_path:
                         cut_path[k1] += 1
                     else:
                         cut_path[k1] = 1
-                #if key not in path_time_freq:
                 path_time_ = path_time[key]
                 for f_inx in f_index:
                     k1 = path1[f_inx]
                     p_time = [sum(p_t[f_inx:f_inx+k+1]) for p_t in path_time_]
-                    #if len(p_time) > 2:
-                    #    print(p_time)
-                    #set_p_time = set(p_time)
-                    #if len(set_p_time) != len(p_time):
-                    #    print(p_time)
                     if k1 not in path_time_freq:
                         path_time_freq[k1] = {}
-                        #for p_t in path_time_:
                         for p_t in p_time:
                             if p_t not in path_time_freq[k1]:
                                 path_time_freq[k1][p_t] = 1
                             else:
                                 path_time_freq[k1][p_t] += 1
                     else:
-                        #print('p1')
-                        #print(path_time_freq[k1])
-                        #print(p_time)
                         for p_t in p_time:
                             if p_t not in path_time_freq[k1]:
                                 path_time_freq[k1][p_t] = 1
                             else:
                                 path_time_freq[k1][p_t] += 1
-                        #print('p2')
-                        #print(path_time_freq[k1])
 
         for k_1 in path_time_freq:
-            #all_value = sum(path_time_freq[k_1].values())
-            #for time in path_time_freq[k_1]:
-            #    path_time_freq[k_1][time] = round(100.0 * path_time_freq[k_1][time] / all_value, 6)
             path_time_freq[k_1] = dict(sorted(path_time_freq[k_1].items(), key=operator.itemgetter(1), reverse=True))
         flag = self.write2(cut_path, k)
         return flag, cut_path, path_time_freq
@@ -320,62 +300,36 @@ class TPath():
         edge_freq = self.get_edge_freq(data)
         print('get path len and freq ...')
         path_freq, path_len, path_time = self.full_(data)#full_len is the frequency of a path; path_len is the length of a path. 
-        #print(path_time)
-        #sys.exit()
         k = 0
         B = [1000, 500, 200, 100, 50, 30, 20, 10, 5, 1, 1]
         t1 = ['>%d'%B[l] for l in range(len(B)-1)]
         t1.append('=1')
-        #self.w_data = pd.DataFrame({'>':t1})
         self.w_data = multiprocessing.Manager().dict()
-        #self.w_data['>'] = t1
         print('cut path ...')
         inxs = [l for l in range(2, 61)]
-        #inxs = range(2,3)
         print(inxs)
         threads_num = self.process_num
-        #threads_num = 1
         t_inxs = int(len(inxs) / threads_num) +1
         thread_array = []
         for len_thr in range(threads_num):
             mins = min((len_thr+1)*t_inxs, len(inxs))
             inxs_array = inxs[len_thr * t_inxs : mins]
             print(inxs_array)
-            #threads_ = threading.Thread(target=self.thread_fun, args=(path_freq, path_len, path_time, inxs_array))
             threads_ = Process(target=self.thread_fun, args=(path_freq, path_len, path_time, inxs_array))
             thread_array.append(threads_)
             print('start thread %d' %len_thr)
             threads_.start()
 
-        #inxs_array = inxs[(len_thr+1) * t_inxs : ]
-        #inxs_array = [2]
-        #threads_ = threading.Thread(target=self.thread_fun, args=(path_freq, path_len, path_time, inxs_array))
-        #threads_ = Process(target=self.thread_fun,args=(path_freq, path_len, path_time, inxs_array))
-        #thread_array.append(threads_)
-        #print('start thread %d' %(len_thr+1))
-        #threads_.start()
-
         for len_thr in range(threads_num):
             thread_array[len_thr].join()
-        #return self.path_time_freq
-        #sys.exit()
         print('write file ...')
         fname = self.subpath+'AAL_stat_%d.csv'%self.dinx
-        #print(self.w_data)
-        #ww_data = self.w_data['>']
-        #del self.w_data['>']
         ww_data = {}
         kkeys = ['%d-edge'%kke for kke in range(2, 100)]
         for kk in kkeys:
             if kk in self.w_data:
                 ww_data[kk] = self.w_data[kk]
-        #for kk,vv in self.w_data.items():
-        #    ww_data[kk] = vv
-        #print(ww_data)
         ww_data = pd.DataFrame.from_dict(ww_data)
-        #ww_data.sort_index(axis=1, inplace=True)
-        #print(ww_data)
-        #print(t1)
         ww_data.insert(loc=0, column='>', value=t1)
         ww_data.to_csv(fname, sep=';', index=None)
 

@@ -79,11 +79,7 @@ class Rout:
                 continue
             l2 += 1
             line = line.split('-')
-            #if line[0] == '473061' or line[1] == '473061':
-            #    print(line)
-            #edges_p.append((line[0], line[1]))
-            #nodes_p.add(line[0])
-            #nodes_p.add(line[1])
+
             edges.append((line[0], line[1]))
             nodes.add(line[0])
             nodes.add(line[1])
@@ -107,15 +103,11 @@ class Rout:
         return edges, nodes, edge_desty, G2
     
     def get_dict(self, ):
-        #with open(self.subpath+self.fpath_desty) as js_file:
-        #    path_desty = json.load(js_file)
-        #with open(self.subpath+self.fvedge_desty) as js_file:
-        #    vedge_desty = json.load(js_file)
         
         with open(self.subpath+self.fedge_desty) as js_file:
             edge_desty = json.load(js_file)
-
         return edge_desty
+
     def get_nodes(self, ):
         gnodes = os.listdir('./res3/u_mul_matrix3/')
         return gnodes
@@ -282,10 +274,9 @@ class Rout:
     def collect_res(self, sub_res):
         self.result.extend(sub_res)
 
-    def main(self, v_s, v_d):
+    def main(self,):
         edge_desty = self.get_dict()
         edges, nodes, edge_desty, G = self.get_graph(edge_desty)
-        #gnodes = self.get_nodes()
         nodes_order, nodes_order_r = {}, {}
         self.result = []
         final_inx = []
@@ -294,22 +285,8 @@ class Rout:
             nodes_order[node] = i
             nodes_order_r[i] = node
             i += 1
-        #gnodes_other = list(set(gnodes) - set(os.listdir(self.umatrix_path)))
-        gnodes_other = list(set(os.listdir('./res3/u_mul_matrix_sig90/')))
-        with open('./res3/temp.name', 'rb') as fw:
-            gnodes_other = pickle.load(fw)
-        gnodes_other = set()
-        with open('./temp/no_nodes') as fn:
-            for line in fn:
-                line = line.strip()
-                gnodes_other.add(line)
-        gnodes_other = list(gnodes_other)
-        with open('./res3/temp.name.sig%d'%self.sigma, 'wb') as fn:
-            pickle.dump(nodes_order, fn)
-        #N = len(gnodes)
+        N = len(nodes)
 
-        N = len(gnodes_other)
-        #self.write_json(nodes_order, 'nodes_order.json')
         if N % self.process_num == 0:
             t_inx = int(N/self.process_num)
         else:
@@ -320,7 +297,7 @@ class Rout:
         print('begin ... ')
         for len_thr in range(self.process_num):
             mins = min((len_thr+1)*t_inx, N)
-            sub_array = gnodes_other[len_thr*t_inx:mins]
+            sub_array = nodes[len_thr*t_inx:mins]
             print(len(sub_array))
             pool.apply_async(self.rout, args=(sub_array, edge_desty, edges, nodes,  nodes_order, G))
         pool.close()
@@ -351,8 +328,6 @@ if __name__ == '__main__':
     upath = subpath+'u_mul_path_sig%d/'%sigma
     speed_file = '../../data/AAL_NGR'
     rout = Rout(subpath, graph_store_name, time_budget, filename, fpath_desty, fvedge_desty, maxsize, degree_file, fedge_desty, umatrix_path, upath, process_num, speed_file, eta, sigma)
-    aa = '271590-352865;352865-352862'
-    v_s = '271590'
-    v_d = '352862'
-    rout.main(v_s, v_d)
+
+    rout.main()
 

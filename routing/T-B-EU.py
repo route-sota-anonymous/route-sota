@@ -44,53 +44,6 @@ class Rout():
         plt.savefig('./figure/'+name2+'_'+name1+'.png')
         plt.close()
 
-    def get_tpath(self, points):
-        with open(self.subpath+self.true_path) as js_file:
-            true_path = json.load(js_file)
-        TA, TB, TC, TD = [], [], [], []
-        for tkey in true_path:
-            a = tkey.find('-')
-            a1 = tkey[:a]
-            b = tkey.rfind('-')
-            b1 = tkey[b+1:]
-            tkey_ = a1+'-'+b1
-            dist = self.get_distance(points, (a1, b1))
-            valu = [float(l)/100 for l in true_path[tkey].values()]
-            if dist < 5: TA.append((tkey, valu, a1, b1))
-            elif dist < 10: TB.append((tkey, valu, a1, b1))
-            elif dist < 25: TC.append((tkey, valu, a1, b1))
-            else: TD.append((tkey, valu, a1, b1))
-        print(len(TA))
-        print(len(TB))
-        print(len(TC))
-        print(len(TD))
-        A = sorted(np.random.randint(0, len(TA), self.pairs_num))
-        B = sorted(np.random.randint(0, len(TB), self.pairs_num))
-        C = sorted(np.random.randint(0, len(TC), self.pairs_num))
-        D = sorted(np.random.randint(0, len(TD), self.pairs_num))
-        ta = [TA[l] for l in A]
-        tb = [TB[l] for l in B]
-        tc = [TC[l] for l in C]
-        td = [TD[l] for l in D]
-        return [ta, tb, tc, td]
-
-
-    def get_pairs(self, ):
-        lines = [1706875, 1811547, 2160483, 41122]
-
-        r_pairs = [[], [], [], []]
-        for l, pname in enumerate(self.pairs_name):
-            A = sorted(np.random.randint(0, lines[l], self.pairs_num))
-            with open(pname) as pn:
-                i, j = 0, 0
-                for line in pn:
-                    line = line.strip().split(',')
-                    if i == A[j]:
-                        r_pairs[l].append((line[1], line[0]))
-                        j += 1
-                        if j == self.pairs_num: break
-                    i += 1
-        return r_pairs
 
     def get_axes(self, ):
         fo = open(self.axes_file)
@@ -112,23 +65,10 @@ class Rout():
         #return distance
         return geodesic((lo1, la1), (lo2, la2)).kilometers
 
-    def get_U(self, u_name):
-        if u_name in self.hU:
-            return self.hU[u_name]
-        fn = open(self.fpath+u_name)
-        U = {}
-        for line in fn:
-            line = line.strip().split(';')
-            U[line[0]] = np.array([float(l) for l in line[1:]])
-        self.hU[u_name] = U
-        return U
 
     def get_dict(self, ):
         with open(self.subpath+self.fpath_desty) as js_file:
             path_desty = json.load(js_file)
-        #with open(self.subpath+self.fvedge_desty) as js_file:
-        #    vedge_desty = json.load(js_file)
-        #    vedge_desty = dict(sorted(vedge_desty.items(), key=operator.itemgetter(0)))
         with open(self.subpath+self.fedge_desty) as js_file:
             edge_desty = json.load(js_file)
             edge_desty = dict(sorted(edge_desty.items(), key=operator.itemgetter(0)))
@@ -145,72 +85,7 @@ class Rout():
                 speed_dict[line[0]] = {3600*float(line[1])/float(line[2]): 1.0}
         return speed_dict
 
-    def get_graph(self, edge_desty, vedge_desty):
-        speed_dict = self.get_speed()
-        all_nodes, all_edges = set(), set()
-        for key in speed_dict:
-            line = key.split('-')
-            all_nodes.add(line[0])
-            all_nodes.add(line[1])
-            all_edges.add(key)
-        all_nodes, all_edges = list(all_nodes), list(all_edges)
-        All_edges = []
-        for edge in all_edges:
-            edge_ = edge.split('-')
-            if edge in edge_desty:
-                cost1 = edge_desty[edge].keys()
-                cost = min(float(l) for l in cost1)
-                All_edges.append((edge_[0], edge_[1], cost))
-            elif edge in speed_dict:
-                cost1 = speed_dict[edge].keys()
-                cost = min(float(l) for l in cost1)
-                All_edges.append((edge_[0], edge_[1], cost))
-        G2 = nx.DiGraph()
-        G2.add_nodes_from(all_nodes)
-        G2.add_weighted_edges_from(All_edges)
 
-
-        fn = open(self.subpath+self.graph_store_name)
-        edges, nodes = [], set()
-        edges_ = set()
-        l, l2 = 0, 0
-        for line in fn:
-            line = line.strip()
-            if line not in edge_desty :#and line not in vedge_desty:
-                if line in speed_dict:
-                    edge_desty[line] = speed_dict[line]
-                    cost = speed_dict[line]
-                else:
-                    l += 1
-                    continue
-                #l += 1
-            if line in edge_desty:
-                cost = min(float(l) for l in edge_desty[line].keys())
-            l2 += 1
-            line = line.split('-')
-            edges.append((line[0], line[1], cost))
-            edges_.add(line[0] + '-' + line[1])
-            nodes.add(line[0])
-            nodes.add(line[1])
-        fn.close()
-        print('%d %d'%(l, l2))
-        '''
-        for node in all_nodes:
-            if node not in nodes:
-                nodes.add(node)
-        for edge in speed_dict:
-            if edge not in edges_:
-                edg = edge.split('-')
-                edges.append((edg[0], edg[1], speed_dict[edge].keys()[0]))
-        '''     
-        nodes = list(nodes)
-        G = nx.DiGraph()
-        G.add_nodes_from(nodes)
-        G.add_weighted_edges_from(edges)
-        self.speed_dict = speed_dict
-        return edges, nodes, G2, speed_dict
-
-    #def get_graph2(self, edge_desty, vedge_desty):
     def get_graph2(self, edge_desty, vedge_desty):
         speed_dict = self.get_speed()
         all_nodes, all_edges = set(), set()
@@ -294,63 +169,6 @@ class Rout():
         return P
 
 
-    def lcs(self, A, B):
-        print('A')
-        print(A)
-        print('B')
-        print(B)
-        def seq(K):
-            K = K.strip().split(';')
-            D = [k.split('-')[0] for k in K[:-1]]
-            D_ = K[-1].split('-')
-            D.append(D_[0])
-            D.append(D_[1])
-            return D
-        A_, B_ = seq(A), seq(B)
-        print('A_')
-        print(A_)
-        print('B_')
-        print(B_)
-        m, n = len(A_), len(B_)
-        L = [[0] *(n) for i in range(m)]
-        max = 0
-        for i in range(m):
-            for j in range(n):
-                if A_[i] == B_[j]:
-                    if i == 0 or j == 0:
-                        L[i][j] = 1
-                    else:
-                        L[i][j] = L[i-1][j-1] + 1
-                    if max < L[i][j]:
-                        max = L[i][j]
-
-        return max, len(A_), len(B_)
-
-    def lcs2(self, A, B):
-        print('A')
-        print(A)
-        print('B')
-        print(B)
-        def seq(K):
-            K = K.strip().split(';')
-            D = [k.split('-')[0] for k in K[:-1]]
-            D_ = K[-1].split('-')
-            D.append(D_[0])
-            D.append(D_[1])
-            return D
-        A_, B_ = set(seq(A)), set(seq(B))
-        print('A_')
-        print(A_)
-        print('B_')
-        print(B_)
-        max_ = len(A_ - (A_ - B_ ))
-        return max_, len(A_), len(B_)
- 
-    #def rout(self, start, desti, edge_desty, vedge_desty, nodes_order, U, G, points):
-    #    #def get_dijkstra(self, source, target):
-    #    path = nx.dijkstra_path(G, start, desti)
-    #    return path
-
     def rout(self, start, desti, edge_desty, vedge_desty, speed_dict, nodes_order, U, G, points):
         path = []
         Q, P_hat = [], []
@@ -408,23 +226,12 @@ class Rout():
             start1 = time.time() 
             vi_getmin = self.get_distance(points, (vi, desti)) / self.speed * 3600
             all_expire += time.time() - start1
-            #print('vi_getmin3: %f'%vi_getmin)
-            #print('dis :%f'%self.get_distance(points, (vi, desti)))
-            #inx_min = np.argwhere(U[vi] > 0)
-            #if len(inx_min) == 0: continue
-            #inx_min = inx_min[0][0]
             cost_time = w_min + vi_getmin
-            #print('T: %d, cost time: %d'%(self.T, cost_time))
             if cost_time <= self.T:
-                #p_max = get_maxP2(w_p_hat, vi)   
                 p_max = max(list(w_p_hat.values()))
-                #p.maxin = *U[nodes_order[p_hat]]
-                #Q.append((p_hat, p_max, w_p_hat, cost_time))
                 Que[p_hat] = p_max
                 Q[p_hat] = (p_max, w_p_hat, cost_time)
         print('len Q %d'%len(Q))
-        #print(Q)
-        #QQ, PP, KK = [], [], []
         QQ = {}
         p_best_p, flag, p_max_m, p_best_cost, p_w_p = 'none', False, -1, -1, -1
         if len(Q) == 0: return 'none1', -1, -1, -1, all_expire, -1
@@ -434,10 +241,6 @@ class Rout():
             all_counts += 1
             (p_max, w_p_hat, cost_time) = Q[p_hat]
             del Q[p_hat]
-            #print(len(Q))
-            #print(len(Que))
-            #(p_hat, p_max, w_p_hat, cost_time) = Q.pop(0)
-            #print(p_hat)
             a = p_hat.rfind('-')
             v_l = p_hat[a+1:]
             if v_l == desti:
@@ -459,13 +262,8 @@ class Rout():
                     start1 = time.time() 
                     vi_getmin = self.get_distance(points, (u, desti)) / self.speed * 3600
                     all_expire += time.time() - start1
-                    #print('vi_getmin1: %f'%vi_getmin)
-                    #print('dis :%f'%self.get_distance(points, (vi, desti)))
-                    #inx_min = np.argwhere(U[u] > 0)
-                    #inx_min = inx_min[0][0]
                     p_best_p = p_hat + ';' + vu
                     p_w_p = self.conv(w_p_hat, w_vu)
-                    #p_max_m = get_maxP2(w_p_hat, u)
                     p_max_m = max(list(p_w_p.values()))
                     p_best_cost = cost_sv + cost_vu + vi_getmin#inx_min*self.sigma
                     flag = True
@@ -487,81 +285,31 @@ class Rout():
                 start1 = time.time() 
                 vi_getmin = self.get_distance(points, (u, desti)) / self.speed * 3600
                 all_expire += time.time() - start1
-                #print('vi_getmin2: %f'%vi_getmin)
-                #print('dis :%f'%self.get_distance(points, (vi, desti)))
                 cost_time = cost_sv + cost_vu + vi_getmin#inx_min*self.sigma
-                #print('qq %d'%(cost_time))
                 if cost_time <= self.T:
                     p_hat_p = p_hat + ';' + vu
                     w_p_hat_p = self.conv(w_p_hat, w_vu)
-                    #p_hat_max = get_maxP2(w_p_hat, u)
                     p_hat_max = max(list(w_p_hat_p.values()))
-                    #if self.check_domin3(w_p_hat_p, QQ):
-                    #QQ.append((p_hat_p, p_hat_max, w_p_hat_p, cost_time))
                     QQ[p_hat_p] = (p_hat_max, w_p_hat_p, cost_time)
-                    #Que[p_hat_p] = p_hat_max
-                    #has_visit.add(p_hat_p)
-                    #else:
-                    #    print('p hat p %s'%p_hat_p)
-                #else:
-                #    print('T vu %s'%vu)
             if flag: break
             if len(Q) == 0:
-                #print('len QQ %d'%(len(QQ)))
-                #print(QQ)
-                #Q = QQ[:]
-                #QQ = []
+
                 Q = copy.deepcopy(QQ)
                 for qqk in QQ:
                     Que[qqk] = QQ[qqk][0]
                 QQ = {}
-        #if p_best_p == 'none': return 'none2', -1, -1, -1
         return p_best_p, p_max_m, p_best_cost, p_w_p, all_expire, all_counts
 
-    def get_T(self, start, desti, G, points):
-        shortest_path = nx.shortest_path(G, start, desti)
-        #print(shortest_path)
-        l_sp = shortest_path[0]
-        sums_d, sums_d2 = 0.0, 0.0
-        for sp in shortest_path[1:]:
-            spd = list(self.speed_dict[l_sp +'-'+ sp].keys())
-            #print(spd)
-            sums_d += self.get_distance(points, (l_sp, sp)) / self.speed * 3600
-            #sums_d2 += spd[0]
-            l_sp = sp
-        print(sums_d)
-        #print(sums_d2)
-        #sys.exit()
-        return sums_d
-
-    def get_T2(self, sspath):
-        sspath = sspath.split(';')
-        sums_d = 0
-        for sp in sspath:
-            spd = list(self.speed_dict[sp].keys())
-            sums_d += spd[0]
-        return sums_d 
 
     def main(self, ):
-        #path_desty, vedge_desty, edge_desty = self.get_dict()
         vedge_desty, edge_desty, path_desty = self.get_dict()
         print('len of edge_desty: %d'%len(edge_desty))
         edges, nodes, G, speed_dict = self.get_graph2(edge_desty, vedge_desty)
         print('len of edge_desty: %d'%len(edge_desty))
-        #sys.exit()
         points = self.get_axes()
-        #r_pairs = self.get_tpath(points)
-        #df2 = open('temp/r_pairs2.txt', 'rb')
-        #df2 = open('temp/b3_pairs.txt', 'rb')
         df2 = open('test/new_temp4_.txt', 'rb')
         r_pairs = pickle.load(df2)
         df2.close()
-        #df3 = open('temp/gt_30_b3pair_.txt', 'rb')
-        df3 = open('temp/odgt_30_b3pair.txt', 'rb')
-        gt_data = pickle.load(df3)
-        df3.close()
-        #sys.exit()
-        #r_pairs = self.get_pairs()
         nodes_order, i = {}, 0
         for node in nodes:
             nodes_order[node] = i
@@ -580,9 +328,6 @@ class Rout():
             one_dis += 1
             print('one_dis : %d'%one_dis)
 
-            #for pair_ in pairs:
-            #    _ = self.get_U(pair_[-1])
-            #for pairs in r_pairs:
             tstart = time.time()
             print('len pairs %d'%len(pairs))
             sums2 = 0
@@ -602,44 +347,30 @@ class Rout():
                 st_key = start + '+' + desti + ':'+str(distan)+':'+str(distan2)
                 stores[st_key] = {}
                 st1, time_budget = start, 0.0
-                print(path_)
-                bpair = pair_[0].split(';')
                 for st2 in path_[1:]:
-                #for st2 in bpair:
                     sedge = st1+'-'+st2
-                    #sedge = st2
                     print('sedge: %s'%sedge)
                     if sedge in edge_desty:
                         speed_key = list([float(l) for l in edge_desty[sedge].keys()])
                         time_budget += float(np.max(speed_key))
-                        #print('speed2')
-                        #print(speed_key)
 
                     elif sedge in speed_dict:
                         speed_key = list(speed_dict[sedge].keys())
                         time_budget += float(np.max(speed_key))
-                        #print('speed1')
-                        #print(speed_key)
                     else: 
                         print(' edge: %s not in speed_dict, exit'%sedge)
                         sys.exit()
                     st1 = st2 
                 print('time budget: %f'%time_budget)
-                #budget_ = self.get_T(start, desti, G, points)
-                #self.T = self.get_T2(pair_[0])
                 for t_b_, t_b in enumerate([0.5, 0.75, 1.0, 1.25, 1.5]):
                     tstart = time.time()
-                    self.T = time_budget * t_b * 2
-                    U = ''#self.get_U(desti)
+                    self.T = time_budget * t_b #* 2
+                    U = ''
                     best_p, max_m, best_c, best_pw, all_expire, all_rounds = self.rout(start, desti, edge_desty, vedge_desty, speed_dict, nodes_order, U, G, points)
                     #stores[st_key][str(t_b)] = [time.time()-tstart, all_rounds]
                     stores[st_key][str(t_b)]=[time.time()-tstart-all_expire,all_rounds]
-                    #print('distance %f km'%distan)
-                    #print('best path %s'%best_p)
-                    #print(len(best_p))
                     if best_p == 'none1': continue
                     if not isinstance(best_pw, dict): continue
-                    #sums += 1
                     tend = time.time()
                     plot_data1[t_b_] += tend - tstart
                     sums[t_b_] += 1
@@ -678,7 +409,7 @@ class Rout():
         print(One_Plot2)
         print(One_Plot2.mean(0))
         print(One_Plot2.mean(1))
-
+        '''
         print('All_rounds')
         print(All_rounds)
         print(All_rounds / One_Sums)
@@ -688,22 +419,18 @@ class Rout():
         fname = 'meclud_1.json'
         with open(self.subpath + fname, 'w') as fw:
             json.dump(stores, fw, indent=4)
-
+        '''
 if __name__ == '__main__':
 
     pairs_name = ['./test/t16A', './test/t16B', './test/t16C', './test/t16D']
     threads_num = 15
-    sigma = 90
+    sigma = 30
     subpath = './res3/'
-    #fpath = './res3/umatrix2/'
-    #fpath = './res3/u_mul_matrix3/'
     fpath = './res3/u_mul_matrix_sig%d/'%sigma
     true_path = 'new_path_desty2.json'
     fpath_desty = 'KKdesty_num_%d.json'%threads_num #'new_path_desty1.json'
-    #fvedge_desty = 'M_vedge_desty_num_%d.json'%threads_num
     fvedge_desty = 'M_vedge_desty2.json'
     fedge_desty = 'M_edge_desty.json'
-    graph_store_name = 'KKgraph_%d.txt'%threads_num
     graph_store_name = 'Mgraph_10.txt'
     degree_file = 'KKdegree2_%d.json'%threads_num
     axes_file = '../../data/vertices.txt'

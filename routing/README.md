@@ -18,4 +18,5 @@ Routing only with virtual paths, no heuristic
 ## V-B-P.py
 Routing with virtual paths and shortest path tree
 
-
+## pqdict.py
+Priority Queue Dictionary
