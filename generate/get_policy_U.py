@@ -112,9 +112,6 @@ class Rout:
         gnodes = os.listdir('./res3/u_mul_matrix3/')
         return gnodes
 
-    #def get_dijkstra(self, source, target):
-    #    path = nx.dijkstra_path(G, source, target)
-    #    return path
 
     def compute_one_rowu(self, v_i, v_d, sucpre, edge_desty, nodes_order, U, Q, G, iset, pred):
         st1, vimin, v_s = v_i, 0.0, sucpre[v_i]
@@ -221,24 +218,10 @@ class Rout:
         return U
     
     def rout(self, sub_nodes, edge_desty, edges, nodes, nodes_order, G):
-        print('hehe')
         print('pid %d'%os.getpid())
-        #rout_res = []
-        #flag = False
         for v_d_ in sub_nodes:
             U_1 = self.rout_(v_d_, edge_desty, edges, nodes, nodes_order, G)
-            #if not flag:
-            #U_2 = np.delete(U_1, final_inx, 0)
-            #del U_1
-            #self.save_matrix(v_d_, U_1, nodes_p)
             self.save_matrix(v_d_, U_1, nodes)
-            #flag = True
-            #np.save(self.umatrix_path+v_d_, U_2)
-            #self.write_file(v_d_)
-            #rout_res.append((v_d_, U_, iset_))
-            #print(v_d_)
-        #print('len rout res %d'%len(rout_res))
-        #return rout_res
     
     def write_json(self, dicts, name):
         with open(self.subpath+name, 'w' ) as fw:
@@ -291,7 +274,6 @@ class Rout:
             t_inx = int(N/self.process_num)
         else:
             t_inx = int(N/self.process_num)+1
-        #self.rout(nodes_p, edge_desty, edges, nodes, nodes_p, nodes_order, G, final_inx)
         
         pool = multiprocessing.Pool(self.process_num)
         print('begin ... ')
@@ -319,7 +301,6 @@ if __name__ == '__main__':
     subpath = './res%d/'%dinx
     filename = '../../data/AAL_short_%d.csv'%dinx
     fpath_desty = 'KKdesty_num_%d.json'%threads_num
-    #fvedge_desty = 'M_vedge_desty_num_%d.json'%threads_num
     fvedge_desty = 'KK_vedge_desty2.json'
     fedge_desty = 'M_edge_desty.json'
     graph_store_name = 'KKgraph_%d.txt'%threads_num

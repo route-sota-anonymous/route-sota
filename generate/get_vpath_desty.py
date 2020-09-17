@@ -54,8 +54,8 @@ for edge in edge_desty_:
         edge_[str(np.abs(k))] = float(ky[k])/100
     edge_desty_1[edge] = edge_
 
-ffname = '../res3/M_vedge_desty_10_2.json'
-ffname = '../res%d/M_edge_desty.json'%dinx
+#ffname = '../res3/M_vedge_desty_10_2.json'
+#ffname = '../res%d/M_edge_desty.json'%dinx
 ffname = '../res3/M_vedge_desty_b4.json'
 with open(ffname, 'w') as fw:
     json.dump(edge_desty_1, fw, indent=4)

@@ -318,12 +318,6 @@ class GenVP():
                 pool.apply_async(self.thread_fun,args=(inxs_array,vopt, path_desty, path_count, path_num, overlap, edge_time_freq, TP, All_Path, points),callback=self.collect_res)#.get()
             pool.close()
             pool.join()
-            #res = self.thread_fun(in_list, vopt, path_desty, path_count, path_num, overlap, edge_time_freq, TP)
-            #path_count.update(path_num_)
-            #self.result.append(res)
-            #in_list = list(res.values())
-            #in_list = self.out_list
-            #in_list = []
             
             path_num2, path_count2= {}, {}
             for res in self.result:
@@ -342,11 +336,6 @@ class GenVP():
                 a = ke.find('-')
                 b = ke.rfind('-')
                 new_edges.add((ke[:a], ke[b+1:]))
-            #if linx == 2:
-            #    for kek in All_Path:
-            #        print(kek)
-            #    sys.exit()
-            #linx += 1
             self.mkgraph.add_edge_list(list(new_edges))
             path_count.update(path_count2)
             path_num.update(path_num2)
@@ -364,12 +353,7 @@ class GenVP():
             out_degrees2.append([l[1] for l in out_degree])
             #out_degrees.append(out_degree)
             kkk += 1
-            '''
-            if kkk > 20:
-                #sys.exit()
-                print('kkk %d'%kkk)
-                break
-            '''
+
         return path_desty, out_degrees, out_degrees2, All_Path
     
     def norms(self, dicts2, is_norm):
@@ -425,9 +409,6 @@ class GenVP():
         self.mkgraph.add_node_list(anodes)
         self.mkgraph.add_edge_list(aedges)
         self.anodes = anodes
-        #self.store_graph(self.subpath+self.graph_store_fname)
-        #sys.exit()
-        #self.mkgraph.construct_graph(data.seg_id.values)
         points = self.get_axes()
         path_desty, path_count, path_num, overlap, TP = self.get_dict()
         
@@ -441,8 +422,6 @@ class GenVP():
         #self.vopt = vopt
         path_desty, out_degrees, out_degrees2, All_Path = self.gen(vopt, path_desty, path_count, path_num, overlap, edge_time_freq, TP, points)
         print('path desty length %d'%len(path_desty))
-        #print(All_Path)
-        #self.write_json(path_desty, self.subpath+self.store_desty_fname)
         self.write_degree(out_degrees, self.subpath+self.store_degree_fname)
         self.write_degree(out_degrees2, self.subpath+self.store_degree_fname2)
         self.store_graph(self.subpath+self.graph_store_fname)
@@ -455,8 +434,6 @@ if __name__ == '__main__':
     dinx = 50
     graph_path = '../../data/AAL_NGR'
     filename = '../../data/AAL_short_%d.csv'%dinx
-    subpath = './subpath/path_travel_time_'
-    subpath = './res3/'
     subpath = './res%d/'%dinx
     p_path = 'path_travel_time_'
     fpath_desty = 'new_path_desty2.json'

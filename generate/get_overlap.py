@@ -159,21 +159,7 @@ class Overlp():
                     path_desty[key_] = jsdata[key]
                     path_count[iters] = key_
                     iters += 1
-        #overlap = self.cal_overlap(list(path_desty.keys()))
-        '''
-        #fname1, fname    
 
-        fpath_desty = 'new_path_desty2.json'
-        fpath_count = 'path_count2.json'
-        with open(self.subpath+fpath_desty) as fn:
-            path_desty = json.load(fn)
-        with open(self.subpath+fpath_count) as fn:
-            path_count_ = json.load(fn)
-        path_count = {}
-        for k in path_count_:
-            path_count[int(k)] = path_count_[k]
-
-        '''
         overlap = self.special2(list(path_desty.keys()), path_count)
         return path_desty, path_count, overlap
 

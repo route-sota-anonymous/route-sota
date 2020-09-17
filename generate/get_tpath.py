@@ -21,12 +21,6 @@ class TPath():
         data = pd.read_csv(self.filename)
         return data
 
-    def plot(self, data):
-        x = np.arange(len(data))
-        plt.plot(x[10000:], data[10000:])
-        plt.savefig('./fig/freqs3.png')
-        plt.close()
-
     def get_edge_freq(self, data):
         seg_ids = data.seg_id.values
         N = len(seg_ids)
@@ -38,35 +32,6 @@ class TPath():
                 edge_freq[seg_ids[i]] += 1
         return edge_freq
 
-    def get_edge_time_freq(self, data):
-        seg_ids, times = data.seg_id.values, data.travel_time.values
-        N = len(seg_ids)
-        edge_time_freq = {}
-        for i in range(N):
-            if seg_ids[i] not in edge_time_freq:
-                edge_time_freq[seg_ids[i]] = {}
-                edge_time_freq[seg_ids[i]][times[i]] = 1
-            else:
-                if times[i] not in edge_time_freq[seg_ids[i]]:
-                    edge_time_freq[seg_ids[i]][times[i]] = 1
-                else:
-                    edge_time_freq[seg_ids[i]][times[i]] = +1
-        for edge in edge_time_freq:
-            all_value = sum(edge_time_freq[edge])
-            edge_time_freq[edge] = dict(sorted(edge_time_freq[edge].items(), key=operator.itemgetter(1), reverse=True))
-            
-        return edge_time_freq
-
-    def get_dataframe(self, dict_data):
-        return pd.DataFrame({'seg_id': dict_data.keys(), 'seg_freq': dict_data.values()})
-
-    def temp_(self, data, edge_freq):
-        A = []
-        for v in data.seg_id.values:
-            #print(edge_freq[v])
-            A.append(edge_freq[v])
-        data['seg_id_freq'] = pd.DataFrame(A)
-        return data
 
     def full_(self, data):
         N = len(data)
