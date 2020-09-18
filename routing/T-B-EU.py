@@ -357,7 +357,7 @@ class Rout():
                 print('time budget: %f'%time_budget)
                 for t_b_, t_b in enumerate([0.5, 0.75, 1.0, 1.25, 1.5]):
                     tstart = time.time()
-                    self.T = time_budget * t_b #* 2
+                    self.T = time_budget * t_b * 2
                     U = ''
                     best_p, max_m, best_c, best_pw, all_expire, all_rounds = self.rout(start, desti, edge_desty, vedge_desty, speed_dict, nodes_order, U, G, points)
                     #stores[st_key][str(t_b)] = [time.time()-tstart, all_rounds]
