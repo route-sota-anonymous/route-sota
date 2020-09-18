@@ -10,11 +10,12 @@ from scipy.stats import entropy
 import pickle
 from pqdict import PQDict
 import copy
+import argparse
 
 from v_opt import VOpt
 
 class Rout():
-    def __init__(self, fpath, T, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, sigma, eta):
+    def __init__(self, fpath, T, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, sigma, eta, query_name):
         self.fpath = fpath
         self.hU = {}
         self.T = T
@@ -34,6 +35,7 @@ class Rout():
         self.true_path = true_path
         self.sigma = sigma
         self.eta = eta
+        self.query_name = query_name
     
 
     def get_axes(self, ):
@@ -118,36 +120,7 @@ class Rout():
         G2 = nx.DiGraph()
         G2.add_nodes_from(all_nodes)
         G2.add_weighted_edges_from(All_edges)
-
-        fn = open(self.subpath+self.graph_store_name)
-        edges, nodes = [], set()
-        edges_ = set()
-        l, l2 = 0, 0
-        for line in fn:
-            line = line.strip()
-            if line not in edge_desty :#and line not in vedge_desty:
-                if line in speed_dict:
-                    edge_desty[line] = speed_dict[line]
-                    cost = speed_dict[line]
-                else:
-                    l += 1
-                    continue
-                #l += 1
-            if line in edge_desty:
-                cost = min(float(l) for l in edge_desty[line].keys())
-            l2 += 1
-            line = line.split('-')
-            edges.append((line[0], line[1], cost))
-            edges_.add(line[0]+'-'+line[1])
-            nodes.add(line[0])
-            nodes.add(line[1])
-        fn.close()
-        print('%d %d'%(l, l2))
-        nodes = list(nodes)
-        G = nx.DiGraph()
-        G.add_nodes_from(nodes)
-        G.add_weighted_edges_from(edges)
-        return edges, nodes, G, G2, speed_dict
+        return all_edges, all_nodes, G2, speed_dict
  
     def get_P(self, ):
         pass
@@ -209,7 +182,7 @@ class Rout():
             return dot_product / ((normA * normB) ** 0.5)
 
  
-    def rout(self, start, desti, edge_desty, vedge_desty, nodes_order, U,  G2, points):
+    def rout(self, start, desti, edge_desty, vedge_desty, nodes_order, U,  G2, points, speed_dict):
         path = []
         Q, P_hat = [], []
         neigh = list(G2.successors(start))
@@ -250,7 +223,7 @@ class Rout():
             tcost1 = time.time()
             inx_min = np.argwhere(U[vi] > 0)
             if len(inx_min) == 0: 
-                print('u 0 vd: %s %s'%(vi, desti))
+                #print('u 0 vd: %s %s'%(vi, desti))
                 continue
             inx_min = inx_min[0][0]
             all_expire += time.time() - tcost1
@@ -261,7 +234,7 @@ class Rout():
                 all_expire += time.time() - tcost1
                 Que[p_hat] = p_max
                 Q[p_hat] = (p_max, w_p_hat, cost_time)
-        print('len Q %d'%len(Q))
+        #print('len Q %d'%len(Q))
         QQ = {}
         p_best_p, flag = 'none', False
         p_max_m, p_best_cost, p_w_p = -1, -1, -1
@@ -301,23 +274,23 @@ class Rout():
                     flag = True
                     break
                 if u in has_visit: 
-                    print('u1 %s, vd %s'%(u, desti))
+                    #print('u1 %s, vd %s'%(u, desti))
                     continue
                 else: has_visit.add(u)
                 if u in p_hat: 
-                    print('u2 %s, vd %s'%(u, desti))
+                    #print('u2 %s, vd %s'%(u, desti))
                     continue
                 vu = v_l + '-' + u
                 w_vu = get_weight(vu)
                 if len(w_vu) == 0:
-                    print('vu %s, vd %s'%(vu, desti))
+                    #print('vu %s, vd %s'%(vu, desti))
                     continue
                 cost_vu = min([float(l) for l in w_vu.keys()])
                 p_order = nodes_order[u] #p_hat]
                 tcost1 = time.time()
                 inx_min = np.argwhere(U[u] > 0)
                 if len(inx_min) == 0 : 
-                    print('inx vu %s, vd %s'%(vu, desti))
+                    #print('inx vu %s, vd %s'%(vu, desti))
                     continue
                 inx_min = inx_min[0][0]
                 all_expire += time.time() - tcost1
@@ -341,7 +314,7 @@ class Rout():
         vedge_desty, edge_desty, path_desty = self.get_dict()
         edges, nodes,  G2, speed_dict = self.get_graph(edge_desty, vedge_desty)
         points = self.get_axes()
-        df2 = open('test/new_temp4_.txt', 'rb')
+        df2 = open(self.query_name,  'rb')
         r_pairs = pickle.load(df2)
         df2.close()
         nodes_order, i = {}, 0
@@ -359,20 +332,22 @@ class Rout():
         One_Sums = np.zeros(20).reshape(4, 5)
         one_dis = -1
         stores = {}
+        cate = ['0-5km', '5-10km', '10-25km', '25-35km']
         for pairs in r_pairs:
             one_dis += 1
-            print('one_dis : %d'%one_dis)
+            #print('one_dis : %d'%one_dis)
             for pair_ in pairs[:]:
                 _ = self.get_U2(pair_[-1])
             dij_time = 0.0
-            print('len pairs %d'%len(pairs))
+            #print('len pairs %d'%len(pairs))
+            print('distance category %s'%cate[one_dis])
             sums2, atimes = 0, 0
             if flag: break
             cost_t2, cost_t3 = 0, 0
             for pair_ in pairs[:]:
                 all_iters += 1
                 tstart = time.time()
-                print(pair_)
+                print('o-d pair: %s'%pair_[0]+'-'+pair_[1])
                 start, desti = pair_[-2], pair_[-1]
                 pred = self.get_dijkstra3(G2, desti)
                 path_, st1 = [start], start
@@ -398,17 +373,17 @@ class Rout():
                         print(' edge: %s not in speed_dict, exit'%sedge)
                         sys.exit()
                     st1 = st2 
-                print('time budget: %f'%time_budget)
+                #print('time budget: %f'%time_budget)
                 U = self.get_U2(desti)
                 if len(U) == 0 : continue
                 tend = time.time()
                 for t_b_, t_b in enumerate([0.5, 0.75, 1.0, 1.25, 1.5]):
                     tstart = time.time()
                     self.T = time_budget * t_b
-                    best_p, max_m, best_c, best_pw, all_expires, all_rounds = self.rout(start, desti, edge_desty, vedge_desty, nodes_order, U, G2, points)
+                    best_p, max_m, best_c, best_pw, all_expires, all_rounds = self.rout(start, desti, edge_desty, vedge_desty, nodes_order, U, G2, points, speed_dict)
                     stores[st_key][str(t_b)] = [time.time()-tstart, all_rounds]
                     if best_p == 'none1' or best_p == 'none2' or best_p == 'none':
-                        print('fail routing')
+                        #print('fail routing')
                         continue
  
                     tend = time.time()
@@ -428,33 +403,39 @@ class Rout():
                         cost_t2 += tend - tstart
                         cost_t3 += tend - tstart - all_expires
             #sys.exit()
-            print('time cost 2 : %f'%cost_t2)
-            print('time cost 3 : %f'%cost_t3)
-            print('sums2: %d'%sums2)
+            #print('time cost 2 : %f'%cost_t2)
+            #print('time cost 3 : %f'%cost_t3)
+            #print('sums2: %d'%sums2)
             one_plot.append(round(cost_t2 / sums2, 4))
             one_plot2.append(round(cost_t3 / sums2, 4))
             
         for i in range(PT):
             if sums[i] == 0:
-                print('zero %d'%i)
+                #print('zero %d'%i)
                 continue
             plot_data1[i] /= sums[i]
             plot_data2[i] /= sums[i]
-        print(plot_data1)
-        print(plot_data2)
-        print(sums)
-        print('one plot, routing cost time for distance')
-        print(one_plot)
-        print(one_plot2)
+
+        #print(plot_data1)
+        #print(plot_data2)
+        #print(sums)
+        #print('one plot, routing cost time for distance')
+        #print(one_plot)
+        #print(one_plot2)
         One_Plot = One_Plot / One_Sums 
         One_Plot2 = One_Plot2 / One_Sums 
-        print('One Plot')
-        print(One_Plot)
-        print(One_Plot.mean(0))
-        print(One_Plot.mean(1))
-        print('One Plot2')
+        print('The success account')
+        print(One_Sums)
+        One_Plot2 = np.nan_to_num(One_Plot2)
+        #print(One_Plot)
+        #print(One_Plot.mean(0))
+        #print(One_Plot.mean(1))
+        #print('One Plot2')
+        print('The time cost for routing')
         print(One_Plot2)
+        print('Time cost for budget: 50%, 75%, 100%, 125%, 150%')
         print(One_Plot2.mean(0))
+        print('Time cost for distance: 0-5km, 5-10km, 10-25km, 25-35km')
         print(One_Plot2.mean(1))
         '''
         print('All_rounds')
@@ -473,23 +454,34 @@ if __name__ == '__main__':
     pairs_name = ['./test/t16A', './test/t16B', './test/t16C', './test/t16D']
     threads_num = 15
     dinx = 30
-    #sigma, eta = 10, 800
-    #sigma, eta = 30, 333
-    #sigma, eta = 60, 170
-    sigma, eta = 90, 111
+    parser = argparse.ArgumentParser(description='T-BS')
+    parser.add_argument('--sig', default=0, type=int)
+    args = parser.parse_args()
+    if args.sig == 0:
+        sigma, eta = 10, 800
+    elif args.sig == 1:
+        sigma, eta = 30, 333
+    elif args.sig == 2:
+        sigma, eta = 60, 170
+    elif args.sig == 3:
+        sigma, eta = 90, 111
+    else:
+        print('wrong sig , exit')
+        sys.exit()
     print('eta: %d, sigma: %d'%(eta, sigma))
-    subpath = './res3/'
-    fpath = './res3/u_mul_matrix_sig%d/'%sigma
+    subpath = '/q/storage/yuanye/work/georgi/genvpath/res3/'
+    fpath = subpath + 'u_mul_matrix_sig%d/'%sigma
     true_path = 'new_path_desty2.json'
     fpath_desty = 'KKdesty_num_%d.json'%threads_num #'new_path_desty1.json'
     fvedge_desty = 'M_vedge_desty2.json'
     fedge_desty = 'M_edge_desty.json'
     graph_store_name = 'Mgraph_10.txt'
     degree_file = 'KKdegree2_%d.json'%threads_num
-    axes_file = '../../data/vertices.txt'
-    speed_file = '../../data/AAL_NGR'
-    fname = '337153'
+    axes_file =  '/q/storage/yuanye/work/data/vertices.txt'
+    speed_file = '/q/storage/yuanye/work/data/AAL_NGR'
+    query_name = '/q/storage/yuanye/work/georgi/genvpath/test/new_temp4_.txt'
     time_budget = 5000
-    rout = Rout(fpath, time_budget, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, sigma, eta)
+
+    rout = Rout(fpath, time_budget, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, sigma, eta, query_name)
     rout.main()
 

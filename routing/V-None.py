@@ -13,7 +13,7 @@ from pqdict import PQDict
 from v_opt import VOpt
 
 class PaceRout():
-    def __init__(self, fpath, T, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, subpath_path, subpath_range, sigma, eta):
+    def __init__(self, fpath, T, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, subpath_path, subpath_range, sigma, eta, query_name):
         self.fpath = fpath
         self.hU = {}
         self.T = T
@@ -35,15 +35,7 @@ class PaceRout():
         self.speed = 50
         self.subpath_path = subpath_path
         self.subpath_range = subpath_range
-
-    def dplot(self, plot_data, name1, name2):
-        #plt.hist(plot_data, bins = 4)
-        label_x = ['0-5km', '5km-10km', '10km-50km', '50+km']
-        #label_y = []
-        plt.bar(x=range(len(label_x)),height=plot_data,width=0.4,alpha=0.8,color='red',)
-        plt.xticks(range(len(label_x)), label_x)
-        plt.savefig('./figure/'+name2+'_'+name1+'.png')
-        plt.close()
+        self.query_name = query_name
 
 
     def get_axes(self, ):
@@ -336,7 +328,7 @@ class PaceRout():
         return U
 
     def main(self, ):
-        df2 = open('test/new_temp4_.txt', 'rb')
+        df2 = open(self.query_name, 'rb')
         r_pairs = pickle.load(df2)
         df2.close()
 
@@ -361,17 +353,19 @@ class PaceRout():
         One_Plot2 = np.zeros(20).reshape(4, 5)
         One_Sums = np.zeros(20).reshape(4, 5)
         one_dis = -1
+        cate = ['0-5km', '5-10km', '10-25km', '25-35km']
         for pairs in r_pairs:
             one_dis += 1
-            print('one_dis : %d'%one_dis)
+            print('distance category %s'%cate[one_dis])
             tstart2 = time.time()
-            print('len pairs %d'%len(pairs))
+            #print('len pairs %d'%len(pairs))
             sums2 = 0
             mps, mps2 = 0.0, 0.0
             alls = 0
             cost_t = 0
             for pair_ in pairs:
                 #print(pair_)
+                print('o-d pair: %s'%pair_[0]+'-'+pair_[1])
                 start, desti = pair_[-2], pair_[-1]
                 if start == desti: 
                     print('wrong: start and desti is same')
@@ -425,7 +419,7 @@ class PaceRout():
                         sums2 += 1
             #print('cost t: %f'%cost_t)
             #print('sums2 %d'%sums2)
-            one_plot.append(round(cost_t/sums2, 4))
+            #one_plot.append(round(cost_t/sums2, 4))
 
         for i in range(PT):
             if sums[i] == 0:
@@ -438,13 +432,20 @@ class PaceRout():
         #print(one_plot)
         One_Plot = One_Plot / One_Sums 
         One_Plot2 = One_Plot2 / One_Sums 
-        print('One Plot')
-        print(One_Plot)
-        print(One_Plot.mean(0))
-        print(One_Plot.mean(1))
-        print('One Plot2')
+        One_Plot = np.nan_to_num(One_Plot)
+        One_Plot2 = np.nan_to_num(One_Plot2)
+        #print('One Plot')
+        #print(One_Plot)
+        #print(One_Plot.mean(0))
+        #print(One_Plot.mean(1))
+        #print('One Plot2')
+        print('The success account')
+        print(One_Sums)
+        print('The time cost for routing')
         print(One_Plot2)
+        print('Time cost for budget: 50%, 75%, 100%, 125%, 150%')
         print(One_Plot2.mean(0))
+        print('Time cost for distance: 0-5km, 5-10km, 10-25km, 25-35km')
         print(One_Plot2.mean(1))
         '''
         print('All_rounds')
@@ -460,8 +461,7 @@ if __name__ == '__main__':
     pairs_name = ['./test/t16A', './test/t16B', './test/t16C', './test/t16D']
     threads_num = 15
     sigma, eta = 30, 333
-    subpath = './res3/'
-    fpath = './res3/umatrix2/'
+    subpath = '/q/storage/yuanye/work/georgi/genvpath/res3/'
     fpath = subpath + 'u_mul_matrix_sig%d/'%sigma
     true_path = 'new_path_desty2.json'
     fpath_desty = 'KKdesty_num_%d.json'%threads_num #'new_path_desty1.json'
@@ -469,14 +469,15 @@ if __name__ == '__main__':
     fedge_desty = 'M_edge_desty.json'
     graph_store_name = 'Mgraph_10.txt'
     degree_file = 'KKdegree2_%d.json'%threads_num
-    axes_file = '../../data/vertices.txt'
-    speed_file = '../../data/AAL_NGR'
+    axes_file =  '/q/storage/yuanye/work/data/vertices.txt'
+    speed_file = '/q/storage/yuanye/work/data/AAL_NGR'
+    query_name = '/q/storage/yuanye/work/georgi/genvpath/test/new_temp4_.txt'
     fname = '337153'
     time_budget = 5000
     subpath_path = './res3/path_travel_time_'
     subpath_range = [l for l in range(2, 39)]
 
-    pace_rout = PaceRout(fpath, time_budget, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, subpath_path, subpath_range, sigma, eta)
+    pace_rout = PaceRout(fpath, time_budget, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, subpath_path, subpath_range, sigma, eta, query_name)
     pace_rout.main()
 
 
