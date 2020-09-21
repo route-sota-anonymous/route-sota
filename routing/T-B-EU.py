@@ -54,8 +54,8 @@ class Rout():
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         R = 6373.0
         distance = R * c
-        #return distance
-        return geodesic((lo1, la1), (lo2, la2)).kilometers
+        return distance
+        #return geodesic((lo1, la1), (lo2, la2)).kilometers
 
 
     def get_dict(self, ):

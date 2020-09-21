@@ -432,15 +432,15 @@ class GenVP():
 
 if __name__ == '__main__':
     dinx = 50
-    graph_path = '../../data/AAL_NGR'
-    filename = '../../data/AAL_short_%d.csv'%dinx
+    graph_path = '/q/storage/yuanye/work/daata/AAL_NGR'
+    filename = '/q/storage/yuanye/work/data/AAL_short_%d.csv'%dinx
     subpath = './res%d/'%dinx
     p_path = 'path_travel_time_'
     fpath_desty = 'new_path_desty2.json'
     fpath_desty = 'path_desty2_1.json'
     fpath_count = 'path_count2_1.json'
     foverlap = 'overlap2_1.txt'
-    axes_file = '../../data/vertices.txt'
+    axes_file = '/q/storage/yuanye/work/data/vertices.txt'
     subpath_range = [l for l in range(2, 39)]
     subpath_range.append(28)
     B = 3

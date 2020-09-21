@@ -185,7 +185,7 @@ class Overlp():
 
 if __name__ == '__main__':
     dinx = 50
-    filename = '../data/trips_real_short_%d.csv'%dinx
+    filename = '/q/storage/yuanye/work/data/trips_real_short_%d.csv'%dinx
     subpath = './subpath/path_travel_time_'
     subpath = './res%d/'%dinx
     p_path = 'path_travel_time_'

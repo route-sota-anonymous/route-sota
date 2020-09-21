@@ -6,8 +6,8 @@ import operator
 
 
 dinx = 50
-fname = '../../../data/AAL_short_%d.csv'%dinx
-B = 4
+fname = '/q/storage/yuanye/work/data/AAL_short_%d.csv'%dinx
+B = 3
 
 def norms(dicts2, is_norm):
     for e_key in dicts2:
@@ -55,7 +55,6 @@ for edge in edge_desty_:
     edge_desty_1[edge] = edge_
 
 #ffname = '../res3/M_vedge_desty_10_2.json'
-#ffname = '../res%d/M_edge_desty.json'%dinx
-ffname = '../res3/M_vedge_desty_b4.json'
+ffname = './res%d/M_edge_desty.json'%dinx
 with open(ffname, 'w') as fw:
     json.dump(edge_desty_1, fw, indent=4)

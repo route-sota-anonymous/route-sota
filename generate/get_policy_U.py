@@ -7,13 +7,14 @@ import multiprocessing
 from multiprocessing import Process
 from pqdict import PQDict
 import pickle 
+import argparse
 
 import networkx as nx
 from tpath import TPath
 
 class Rout:
     #def __init__(self, G, maxsize, node_size, eta, node_list, graph_store_name, time_budget ):
-    def __init__(self, subpath, graph_store_name, time_budget, filename, fpath_desty, fvedge_desty, maxsize, degree_file, fedge_desty, umatrix_path, upath, process_num, speed_file, eta=12, sigma=3):
+    def __init__(self, subpath, subpath2, graph_store_name, time_budget, filename, fpath_desty, fvedge_desty, maxsize, degree_file, fedge_desty, umatrix_path, upath, process_num, speed_file, eta=12, sigma=3):
         self.maxsize = maxsize
         self.eta = eta
         self.sigma = sigma
@@ -24,6 +25,7 @@ class Rout:
         self.fpath_desty = fpath_desty
         self.fvedge_desty = fvedge_desty
         self.subpath = subpath
+        self.subpath2 = subpath2
         self.degree_file = degree_file
         self.fedge_desty = fedge_desty
         self.umatrix_path = umatrix_path
@@ -258,6 +260,10 @@ class Rout:
         self.result.extend(sub_res)
 
     def main(self,):
+        if not os.path.exits(self.subpath2):
+            os.mkdir(self.subpath2)
+        if not os.path.exits(self.umatrix_path):
+            os.mkdir(self.umatrix_path)
         edge_desty = self.get_dict()
         edges, nodes, edge_desty, G = self.get_graph(edge_desty)
         nodes_order, nodes_order_r = {}, {}
@@ -294,21 +300,38 @@ if __name__ == '__main__':
     time_budget = 1000
     maxsize = 10000
     #eta, sigma = 333, 30
-    eta, sigma = 111, 90
+    #eta, sigma = 111, 90
     #eta, sigma = 170, 60
     #eta, sigma = 800, 10
+    parser = argparse.ArgumentParser(description='T-BS')
+    parser.add_argument('--sig', default=0, type=int)
+    args = parser.parse_args()
+    if args.sig == 0:
+        sigma, eta = 10, 800
+    elif args.sig == 1:
+        sigma, eta = 30, 333
+    elif args.sig == 2:
+        sigma, eta = 60, 170
+    elif args.sig == 3:
+        sigma, eta = 90, 111
+    else:
+        print('wrong sig , exit')
+        sys.exit()
+    print('eta: %d, sigma: %d'%(eta, sigma))
+
     dinx = 3
-    subpath = './res%d/'%dinx
-    filename = '../../data/AAL_short_%d.csv'%dinx
+    subpath = '/q/storage/yuanye/work/georgi/genvpath/res%d/'%dinx
+    subpath2 = './res%d'%dinx
+    filename = '/q/storage/yuanye/work/data/AAL_short_%d.csv'%dinx
     fpath_desty = 'KKdesty_num_%d.json'%threads_num
     fvedge_desty = 'KK_vedge_desty2.json'
     fedge_desty = 'M_edge_desty.json'
     graph_store_name = 'KKgraph_%d.txt'%threads_num
     degree_file = 'KKdegree2_%d.json'%threads_num
-    umatrix_path = subpath+'u_mul_matrix_sig%d/'%sigma
+    umatrix_path = subpath2+'u_mul_matrix_sig%d/'%sigma
     upath = subpath+'u_mul_path_sig%d/'%sigma
-    speed_file = '../../data/AAL_NGR'
-    rout = Rout(subpath, graph_store_name, time_budget, filename, fpath_desty, fvedge_desty, maxsize, degree_file, fedge_desty, umatrix_path, upath, process_num, speed_file, eta, sigma)
+    speed_file = '/q/storage/yuanye/work/data/AAL_NGR'
+    rout = Rout(subpath, subpath2, graph_store_name, time_budget, filename, fpath_desty, fvedge_desty, maxsize, degree_file, fedge_desty, umatrix_path, upath, process_num, speed_file, eta, sigma)
 
     rout.main()
 

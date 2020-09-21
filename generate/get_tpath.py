@@ -302,7 +302,8 @@ class TPath():
 if __name__ == '__main__':
     dinx = 50
     process_num = 20
-    filename = '../../data/AAL_short_%d.csv'%dinx
+    filename = '/q/storage/yuanye/work/data/AAL_short_%d.csv'%dinx
+    
     subpath = './res%d/'%dinx
     tpath = TPath(filename, subpath, dinx, process_num)
     tpath.main()
