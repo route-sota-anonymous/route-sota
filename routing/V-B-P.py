@@ -244,7 +244,7 @@ class Modified():
 
     def rout(self, start, desti, edge_desty, vedge_desty, nodes_order, U, G, G2, points, gt_path, gt_path_, pred):
         Q, P_hat = [], []
-        neigh = list(G2.successors(start))
+        neigh = list(G.successors(start))
         print('neigh %d'%len(neigh))
         start_ax = points[start]
         desti_ax = points[desti]
@@ -306,8 +306,8 @@ class Modified():
                         iters = 1
                         break
             if not flag: 
-                l = 1
-                s = len(path_)
+                s = 0
+                l = len(path_)
             else:
                 if iters == 0:
                     s = 0
@@ -316,7 +316,7 @@ class Modified():
                     s = l+1
                     l = len(paths_)
                 #print('got shot')
-            for key in paths_[s:1]:
+            for key in paths_[s:l]:
                 #key = spath+'-'+epath
                 if key in edge_desty:
                     vi_getmin += min(abs(float(ll)) for ll in edge_desty[key].keys())
@@ -365,7 +365,7 @@ class Modified():
                 p_w_p = w_p_hat
                 flag = True
                 break
-            neigh = list(G2.successors(v_l))
+            neigh = list(G.successors(v_l))
             if len(w_p_hat.keys()) == 0:
                 print(w_p_hat)
                 print(p_hat)
