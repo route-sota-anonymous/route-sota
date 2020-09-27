@@ -13,31 +13,22 @@ from pqdict import PQDict
 from v_opt import VOpt
 
 class PaceRout():
-    def __init__(self, fpath, T, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, subpath_path, subpath_range, sigma, eta, query_name):
-        self.fpath = fpath
+    def __init__(self, policy_path, true_path, virtual_path, edge_desty, subpath, axes_file, speed_file, query_name, sigma, eta):
         self.hU = {}
-        self.T = T
-        self.sigma = sigma
-        self.eta = eta
         self.vopt = VOpt()
         self.B = 3
-        self.fpath_desty = fpath_desty
-        self.fvedge_desty = fvedge_desty
-        self.fedge_desty = fedge_desty
-        self.graph_store_name  = graph_store_name
-        self.degree_file =  degree_file
+        self.policy_path = policy_path
+        self.true_path = true_path
+        self.virtual_path = virtual_path
+        self.edge_desty = edge_desty
         self.subpath = subpath
         self.axes_file = axes_file
-        self.pairs_name = pairs_name
-        self.pairs_num = 90
         self.speed_file = speed_file
-        self.true_path = true_path
         self.speed = 50
-        self.subpath_path = subpath_path
-        self.subpath_range = subpath_range
         self.query_name = query_name
-
-
+        self.sigma = sigma
+        self.eta = eta
+ 
     def get_axes(self, ):
         fo = open(self.axes_file)
         points = {}
@@ -52,9 +43,13 @@ class PaceRout():
         return geodesic((lo1, la1), (lo2, la2)).kilometers
 
     def get_dict(self, ):
-        with open(self.subpath+self.fpath_desty) as js_file:
-            path_desty = json.load(js_file)
-        with open(self.subpath+self.fedge_desty) as js_file:
+        path_desty = {}
+        for l in range(1, 5):
+            with open(self.subpath+self.virtual_path+'_%d.json'%l) as js_file:
+                path_desty_ = json.load(js_file)
+            path_desty.update(path_desty_)
+
+        with open(self.subpath+self.edge_desty) as js_file:
             edge_desty = json.load(js_file)
             edge_desty = dict(sorted(edge_desty.items(), key=operator.itemgetter(0)))
         vedge_desty = {}
@@ -91,7 +86,6 @@ class PaceRout():
                 cost = min(float(l) for l in cost1)
                 All_edges.append((edge_[0], edge_[1], cost))
         for edge in edge_desty:
-            #edge_ = edge.split('-')
             if edge not in speed_dict:
                 print(edge)
         G2 = nx.DiGraph()
@@ -107,20 +101,11 @@ class PaceRout():
 
         for edge in vedge_desty:
             if edge not in edge_desty and edge not in speed_dict:
-                #if edge in temp_edges: 
-                #    print('del %s '%edge)
-                #    continue
                 edge_ = edge.split('-')
                 cost1 = vedge_desty[edge].keys()
                 cost = min(float(l) for l in cost1)
-                #distan = self.get_distance(points, (edge_[0], edge_[1]))
-                #print(distan)
-                #if distan > 17: continue 
                 All_edges.append((edge_[0], edge_[1], cost))
                 all_edges.add(edge)
-        #for edge in temp_edges:
-        #    if edge in vedge_desty:
-        #        del vedge_desty[edge]
         print('len of vedge_desty 2: %d'%len(vedge_desty))
         all_nodes, all_edges = list(all_nodes), list(all_edges)
         G = nx.DiGraph()
@@ -341,15 +326,7 @@ class PaceRout():
             nodes_order[node] = i
             i += 1
 
-        plot_data1 = []
         U = ''
-        all_mps, all_mps2 = [], []
-        ls = 0
-        PT = 5
-        sums, plot_data1 = [0] * PT, [0] * PT
-        one_plot = []
-        All_rounds = np.zeros(20).reshape(4, 5)
-        One_Plot = np.zeros(20).reshape(4, 5)
         One_Plot2 = np.zeros(20).reshape(4, 5)
         One_Sums = np.zeros(20).reshape(4, 5)
         one_dis = -1
@@ -359,17 +336,10 @@ class PaceRout():
             print('distance category %s'%cate[one_dis])
             tstart2 = time.time()
             #print('len pairs %d'%len(pairs))
-            sums2 = 0
-            mps, mps2 = 0.0, 0.0
-            alls = 0
-            cost_t = 0
             for pair_ in pairs:
-                #print(pair_)
                 print('o-d pair: %s'%pair_[0]+'-'+pair_[1])
                 start, desti = pair_[-2], pair_[-1]
                 if start == desti: 
-                    print('wrong: start and desti is same')
-                    print(pair_)
                     continue
                 start, desti = pair_[-2], pair_[-1]
                 pred = self.get_dijkstra3(G, desti)
@@ -395,7 +365,6 @@ class PaceRout():
                     st1 = st2 
 
                 tend = time.time()
-                ls += 1
                 print('budget %f'%time_budget)
                 for t_b_, t_b in enumerate([0.5, 0.75, 1.0, 1.25, 1.5]):
                     tstart = time.time()
@@ -403,81 +372,35 @@ class PaceRout():
 
                     best_p, best_w, all_rounds, all_expire = self.rout(start, desti, edge_desty, vedge_desty, path_desty, nodes_order, U, G, points, speed_dict)
                     if best_p == None: continue
-                    #print('distance %f km'%(self.get_distance(points, (start, desti))))
-                    #print('best path %s'%best_p)
                     tend = time.time()
-                    plot_data1[t_b_] += tend - tstart
-                    sums[t_b_] += 1
 
-                    One_Plot[one_dis][t_b_] += tend - tstart 
                     One_Plot2[one_dis][t_b_] += tend - tstart - all_expire
                     One_Sums[one_dis][t_b_] += 1
-                    All_rounds[one_dis][t_b_] += all_rounds
 
-                    if t_b_ == 2:
-                        cost_t += tend - tstart
-                        sums2 += 1
-            #print('cost t: %f'%cost_t)
-            #print('sums2 %d'%sums2)
-            #one_plot.append(round(cost_t/sums2, 4))
-
-        for i in range(PT):
-            if sums[i] == 0:
-                #print('zero %d'%i)
-                continue
-            plot_data1[i] /= sums[i]
-        #print(plot_data1)
-        #print(sums)
-        #print('one plot, routing cost time for distance')
-        #print(one_plot)
-        One_Plot = One_Plot / One_Sums 
         One_Plot2 = One_Plot2 / One_Sums 
-        One_Plot = np.nan_to_num(One_Plot)
         One_Plot2 = np.nan_to_num(One_Plot2)
-        #print('One Plot')
-        #print(One_Plot)
-        #print(One_Plot.mean(0))
-        #print(One_Plot.mean(1))
-        #print('One Plot2')
-        print('The success account')
-        print(One_Sums)
+
         print('The time cost for routing')
         print(One_Plot2)
         print('Time cost for budget: 50%, 75%, 100%, 125%, 150%')
         print(One_Plot2.mean(0))
         print('Time cost for distance: 0-5km, 5-10km, 10-25km, 25-35km')
         print(One_Plot2.mean(1))
-        '''
-        print('All_rounds')
-        print(All_rounds)
-        print(All_rounds / One_Sums)
-        All_rounds = All_rounds / One_Sums
-        print(All_rounds.mean(0))
-        print(All_rounds.mean(1))
-        '''
 
 if __name__ == '__main__':
 
-    pairs_name = ['./test/t16A', './test/t16B', './test/t16C', './test/t16D']
     threads_num = 15
     sigma, eta = 30, 333
-    subpath = '/q/storage/yuanye/work/georgi/genvpath/res3/'
-    fpath = subpath + 'u_mul_matrix_sig%d/'%sigma
-    true_path = 'new_path_desty2.json'
-    fpath_desty = 'KKdesty_num_%d.json'%threads_num #'new_path_desty1.json'
-    fvedge_desty = 'M_vedge_desty2.json'
-    fedge_desty = 'M_edge_desty.json'
-    graph_store_name = 'Mgraph_10.txt'
-    degree_file = 'KKdegree2_%d.json'%threads_num
-    axes_file =  '/q/storage/yuanye/work/data/vertices.txt'
-    speed_file = '/q/storage/yuanye/work/data/AAL_NGR'
-    query_name = '/q/storage/yuanye/work/georgi/genvpath/test/new_temp4_.txt'
-    fname = '337153'
-    time_budget = 5000
-    subpath_path = './res3/path_travel_time_'
-    subpath_range = [l for l in range(2, 39)]
+    subpath = '../data/'
+    policy_path = subpath + 'matrix_u/%d/'%sigma
+    true_path = 'T-path_desty.json'
+    virtual_path = 'V-path_desty'
+    edge_desty = 'edge_desty.json'
+    axes_file =  '../data/vertices.txt'
+    speed_file = '../data/map_ngr'
+    query_name = subpath + 'odpairs.txt'
 
-    pace_rout = PaceRout(fpath, time_budget, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, subpath_path, subpath_range, sigma, eta, query_name)
+    pace_rout = PaceRout(policy_path, true_path, virtual_path, edge_desty, subpath, axes_file, speed_file, query_name, sigma, eta)
     pace_rout.main()
 
 

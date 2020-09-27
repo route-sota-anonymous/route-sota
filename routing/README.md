@@ -1,5 +1,10 @@
 # Routing Algorithms
 
+## T-None.py
+Routing without any heuristic
+
+./run_T-None.sh
+
 ## T-B-EU.py
 Binary heuristic routing using Euclidean distance
 

@@ -15,25 +15,21 @@ from v_opt import VOpt
 
 class Modified():
 
-    def __init__(self, fpath, T, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, query_name):
-        self.fpath = fpath
-        self.T = T
-        self.sigma = 30
+    def __init__(self, policy_path, true_path, virtual_path, edge_desty, subpath, axes_file, speed_file, query_name, sigma, eta):
+        self.hU = {}
         self.vopt = VOpt()
         self.B = 3
-        self.fpath_desty = fpath_desty
-        self.fvedge_desty = fvedge_desty
-        self.fedge_desty = fedge_desty
-        self.graph_store_name  = graph_store_name
-        self.degree_file =  degree_file
+        self.policy_path = policy_path
+        self.true_path = true_path
+        self.virtual_path = virtual_path
+        self.edge_desty = edge_desty
         self.subpath = subpath
         self.axes_file = axes_file
-        self.pairs_name = pairs_name
-        self.pairs_num = 90
         self.speed_file = speed_file
-        self.true_path = true_path
         self.speed = 50
         self.query_name = query_name
+        self.sigma = sigma
+        self.eta = eta
     
    
     def add_tpath(self,):
@@ -90,9 +86,13 @@ class Modified():
 
 
     def get_dict(self, ):
-        with open(self.subpath+self.fpath_desty) as js_file:
-            path_desty = json.load(js_file)
-        with open(self.subpath+self.fedge_desty) as js_file:
+        path_desty = {}
+        for l in range(1, 5):
+            with open(self.subpath+self.virtual_path+'_%d.json'%l) as js_file:
+                path_desty_ = json.load(js_file)
+            path_desty.update(path_desty_)
+
+        with open(self.subpath+self.edge_desty) as js_file:
             edge_desty = json.load(js_file)
             edge_desty = dict(sorted(edge_desty.items(), key=operator.itemgetter(0)))
         vedge_desty = {}
@@ -163,14 +163,9 @@ class Modified():
         vedge_desty.update(vedge_desty_)
         for edge in vedge_desty:
             if edge not in edge_desty and edge not in speed_dict:
-                #if edge in temp_edges: 
-                #    print('del %s '%edge)
-                #    continue
                 edge_ = edge.split('-')
                 cost1 = vedge_desty[edge].keys()
                 cost = min(float(l) for l in cost1)
-                #distan = self.get_distance(points, (edge_[0], edge_[1]))
-                #if distan > 17: continue 
                 All_edges.append((edge_[0], edge_[1], cost))
                 all_edges.add(edge)
         all_edges = list(all_edges)
@@ -455,14 +450,6 @@ class Modified():
         for node in nodes:
             nodes_order[node] = i
             i += 1
-        plot_data1, plot_kl, plot_lcs = [], [], []
-        all_mps, all_mps2 = [], []
-        ls = 0
-        PT = 5
-        plot_data1, plot_data2,  sums = [0]*PT, [0]*PT, [0]*PT
-        one_plot, one_plot2 = [], []
-        All_rounds = np.zeros(20).reshape(4, 5)
-        One_Plot  = np.zeros(20).reshape(4, 5)
         One_Plot2 = np.zeros(20).reshape(4, 5)
         One_Sums = np.zeros(20).reshape(4, 5)
         one_dis = -1
@@ -472,10 +459,7 @@ class Modified():
             print('distance category %s'%cate[one_dis])
             tstart2 = time.time()
             #print('len pairs %d'%len(pairs))
-            sums2  = 0
             all_expires = 0.0
-            mps, mps2 = 0.0, 0.0
-            cost_t, cost_t2 = 0, 0
             for pair_ in pairs:
                 #print(pair_)
                 print('o-d pair: %s'%pair_[0]+'-'+pair_[1])
@@ -513,56 +497,14 @@ class Modified():
                     if all_expire < 0: continue
                     if best_p == None: continue
                     all_expires += all_expire
-                    #print('distance %f km'%(self.get_distance(points, (start, desti))))
-                    #print('best path %s'%best_p)
-                    #print(len(best_p))
-                    #print(pair_[1])
-
                     tend = time.time()
-                    plot_data1[t_b_] += tend - tstart
-                    plot_data2[t_b_] += tend - tstart - all_expire
-                    sums[t_b_] += 1
 
-                    One_Plot[one_dis][t_b_] += tend - tstart 
                     One_Plot2[one_dis][t_b_] += tend - tstart - all_expire
                     One_Sums[one_dis][t_b_] += 1
-                    All_rounds[one_dis][t_b_] += all_rounds
 
-                    if t_b_ == 2:
-                        cost_t += tend - tstart 
-                        cost_t2 += tend - tstart - all_expire
-                        sums2 += 1
-            #one_plot.append(round(cost_t / sums2, 4))
-            #one_plot2.append(round(cost_t2 / sums2, 4))
-            #print('time cost %f'%cost_t)
-            #print('time cost 2 %f'%cost_t2)
-            #print('sums2 : %d'%sums2)
-        for i in range(PT):
-            if sums[i] == 0:
-                print('zero %d'%i)
-                continue
-            plot_data1[i] /= sums[i]
-            plot_data2[i] /= sums[i]
-
-            #all_mps.append(round(mps/sums, 4))
-            #all_mps2.append(round(mps2/sums, 4))
-        '''
-        print(plot_data1)
-        print(plot_data2)
-        print(sums)
-        print('one plot')
-        print(one_plot)
-        print(one_plot2)
-        '''
-        One_Plot = One_Plot / One_Sums 
         One_Plot2 = One_Plot2 / One_Sums 
-        One_Plot = np.nan_to_num(One_Plot)
         One_Plot2 = np.nan_to_num(One_Plot2)
-        #print('One Plot')
-        #print(One_Plot)
-        #print(One_Plot.mean(0))
-        #print(One_Plot.mean(1))
-        #print('One_Plot2')
+
         print('The success account')
         print(One_Sums)
         print('The time cost for routing')
@@ -571,32 +513,20 @@ class Modified():
         print(One_Plot2.mean(0))
         print('Time cost for distance: 0-5km, 5-10km, 10-25km, 25-35km')
         print(One_Plot2.mean(1))
-        '''
-        print('All_rounds')
-        print(All_rounds)
-        print(All_rounds / One_Sums)
-        All_rounds = All_rounds / One_Sums
-        print(All_rounds.mean(0))
-        print(All_rounds.mean(1))
-        '''
    
 if __name__ == '__main__':
 
-    pairs_name = ['./test/t16A', './test/t16B', './test/t16C', './test/t16D']
     threads_num = 15
-    sigma = 30
-    subpath = '/q/storage/yuanye/work/georgi/genvpath/res3/'
-    fpath = subpath + 'u_mul_matrix_sig%d/'%sigma
-    true_path = 'new_path_desty2.json'
-    fpath_desty = 'KKdesty_num_%d.json'%threads_num #'new_path_desty1.json'
-    fvedge_desty = 'M_vedge_desty2.json'
-    fedge_desty = 'M_edge_desty.json'
-    graph_store_name = 'Mgraph_10.txt'
-    degree_file = 'KKdegree2_%d.json'%threads_num
-    axes_file =  '/q/storage/yuanye/work/data/vertices.txt'
-    speed_file = '/q/storage/yuanye/work/data/AAL_NGR'
-    query_name = '/q/storage/yuanye/work/georgi/genvpath/test/new_temp4_.txt'
-    time_budget = 5000
-    rout = Modified(fpath, time_budget, fpath_desty, fvedge_desty, fedge_desty, graph_store_name, degree_file, subpath, axes_file, pairs_name, speed_file, true_path, query_name)
+    sigma, eta = 30, 333
+    subpath = '../data/'
+    policy_path = subpath + 'matrix_u/%d/'%sigma
+    true_path = 'T-path_desty.json'
+    virtual_path = 'V-path_desty'
+    edge_desty = 'edge_desty.json'
+    axes_file =  '../data/vertices.txt'
+    speed_file = '../data/map_ngr'
+    query_name = subpath + 'odpairs.txt'
+
+    rout = Modified(policy_path, true_path, virtual_path, edge_desty, subpath, axes_file, speed_file, query_name, sigma, eta)
     rout.main()
 
